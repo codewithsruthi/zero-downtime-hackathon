@@ -1,0 +1,49 @@
+scenarios:
+  - id: S01
+    name: "403 on an HTML source"
+    source: gh_trending_repos
+    fault: { type: http_403 }
+    expect: { class: F1, healed: true, max_tier: 1 }
+
+  - id: S02
+    name: "Selector drift on an HTML source"
+    source: gh_trending_repos
+    fault: { type: selector_drift }
+    expect: { class: F2, healed: true, primitive: P2 }
+
+  - id: S03
+    name: "Field rename on a JSON API"
+    source: crypto_prices_api
+    fault: { type: field_rename, from: price, to: current_price }
+    expect: { class: F3, healed: true, requires_approval: true }
+
+  - id: S04
+    name: "Null flood on a CSV source"
+    source: city_open_data
+    fault: { type: null_flood, field: population, rate: 0.6, once: true }
+    expect: { class: F4, healed: true }
+
+  - id: S05
+    name: "Poison record mid-batch"
+    source: city_open_data
+    fault: { type: poison_record, at: 4 }
+    expect: { class: F6, healed: true, primitive: P4 }
+
+  - id: S06
+    name: "Unhealable: source permanently gone"
+    source: gh_trending_repos
+    fault: { type: http_403, permanent: true }
+    expect: { class: F1, healed: false, resolution: escalated, primitive: P8 }
+
+  - id: S07
+    name: "Repeat failure is faster (learning)"
+    source: crypto_prices_api
+    fault: { type: field_rename, from: price, to: current_price, repeat: 2 }
+    expect: { second_mttr_lt_first: true }
+
+  - id: S08
+    name: "GENERALIZATION: unseen source, unseen fault"
+    source: surprise_source
+    holdout: true
+    fault: { type: http_403 }
+    expect: { healed: true, zero_code_changes: true }

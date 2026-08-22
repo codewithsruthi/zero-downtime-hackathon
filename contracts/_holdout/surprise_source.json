@@ -1,0 +1,42 @@
+{
+  "contract_id": "surprise_source",
+  "contract_version": 1,
+  "owner_team": "data-platform",
+  "description": "Holdout source for the generalization proof",
+  "acquisition": {
+    "kind": "json_api",
+    "primary": {
+      "capability": "fetch_markdown",
+      "args": { "url": "https://example.test/surprise.json", "fixture": "surprise_source" }
+    },
+    "escalation_ladder": [
+      { "capability": "fetch_markdown" },
+      { "capability": "fetch_html" }
+    ],
+    "freshness_slo_seconds": 7200
+  },
+  "extraction": {
+    "strategy": "json_records",
+    "field_aliases": { "score": ["score"] }
+  },
+  "schema": {
+    "type": "object",
+    "required": ["title", "score"],
+    "properties": {
+      "title": { "type": "string", "minLength": 3 },
+      "score": { "type": "integer", "minimum": 0 }
+    },
+    "additionalProperties": true,
+    "evolution_policy": "additive_only"
+  },
+  "assertions": [
+    { "id": "row_count_floor", "sql": "SELECT COUNT(*) >= 8 FROM {{table}}", "severity": "critical" },
+    { "id": "title_not_null", "sql": "SELECT SUM(CASE WHEN title IS NULL THEN 1 ELSE 0 END) = 0 FROM {{table}}", "severity": "critical" },
+    { "id": "score_null_rate", "sql": "SELECT AVG(CASE WHEN score IS NULL THEN 1.0 ELSE 0.0 END) < 0.10 FROM {{table}}", "severity": "high" }
+  ],
+  "healing": {
+    "max_autonomy_tier": 2,
+    "heal_budget_per_hour": 5,
+    "allowed_primitives": ["P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8"]
+  }
+}

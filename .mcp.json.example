@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "port": {
+      "url": "https://mcp.port.io/v1",
+      "headers": {
+        "x-read-only-mode": "0",
+        "x-allowed-actions-to-run": "register_source,inject_chaos,approve_heal,force_heal,reset_circuit,rollback_contract"
+      }
+    },
+    "signoz": {
+      "url": "https://mcp.us.signoz.cloud/mcp",
+      "headers": {
+        "SIGNOZ-API-KEY": "${SIGNOZ_API_KEY}",
+        "X-SigNoz-URL": "${SIGNOZ_INSTANCE_URL}"
+      }
+    },
+    "brightdata": {
+      "url": "https://mcp.brightdata.com/mcp?token=${BRIGHTDATA_API_TOKEN}&groups=advanced_scraping,browser,research"
+    }
+  }
+}

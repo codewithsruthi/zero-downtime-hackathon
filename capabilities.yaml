@@ -1,0 +1,101 @@
+capabilities:
+
+  fetch_markdown:
+    server: brightdata
+    tool: scrape_as_markdown
+    args: { url: "{url}" }
+    rung: 0
+
+  fetch_html:
+    server: brightdata
+    tool: scrape_as_html
+    args: { url: "{url}" }
+    rung: 1
+
+  ai_extract:
+    server: brightdata
+    tool: extract
+    args: { url: "{url}", extraction_prompt: "{prompt}" }
+    rung: 2
+
+  browser_open:
+    server: brightdata
+    tool: scraping_browser_navigate
+    args: { url: "{url}" }
+    rung: 3
+  browser_snapshot:  { server: brightdata, tool: scraping_browser_snapshot }
+  browser_get_html:  { server: brightdata, tool: scraping_browser_get_html }
+  browser_get_text:  { server: brightdata, tool: scraping_browser_get_text }
+  browser_network:   { server: brightdata, tool: scraping_browser_network_requests }
+  browser_wait:      { server: brightdata, tool: scraping_browser_wait_for_ref }
+
+  find_alternate_source:
+    server: brightdata
+    tool: search_engine
+    args: { query: "{query}", engine: "google" }
+
+  batch_fetch:
+    server: brightdata
+    tool: scrape_batch
+    args: { urls: "{urls}" }
+
+  quota_check:
+    server: brightdata
+    tool: session_stats
+
+  find_error_traces:
+    server: signoz
+    tool: signoz_search_traces
+  trace_detail:
+    server: signoz
+    tool: signoz_get_trace_details
+  aggregate_traces:
+    server: signoz
+    tool: signoz_aggregate_traces
+  search_logs:
+    server: signoz
+    tool: signoz_search_logs
+  aggregate_logs:
+    server: signoz
+    tool: signoz_aggregate_logs
+  query_metric:
+    server: signoz
+    tool: signoz_query_metrics
+  list_metrics:
+    server: signoz
+    tool: signoz_list_metrics
+  field_keys:
+    server: signoz
+    tool: signoz_get_field_keys
+  field_values:
+    server: signoz
+    tool: signoz_get_field_values
+  active_alerts:
+    server: signoz
+    tool: signoz_list_alerts
+  alert_history:
+    server: signoz
+    tool: signoz_get_alert_history
+  create_alert:
+    server: signoz
+    tool: signoz_create_alert
+  raw_query:
+    server: signoz
+    tool: signoz_execute_builder_query
+  create_dashboard:
+    server: signoz
+    tool: signoz_create_dashboard
+  list_services:
+    server: signoz
+    tool: signoz_list_services
+
+  catalog_upsert_blueprint: { server: port, tool: upsert_blueprint }
+  catalog_upsert_entity:    { server: port, tool: upsert_entity }
+  catalog_query:            { server: port, tool: list_entities }
+  catalog_blueprints:       { server: port, tool: list_blueprints }
+  governance_run_action:    { server: port, tool: run_action }
+  governance_trigger:       { server: port, tool: trigger_run }
+  governance_track_run:     { server: port, tool: track_action_run }
+  governance_list_actions:  { server: port, tool: list_actions }
+  scorecard_upsert:         { server: port, tool: upsert_scorecard }
+  scorecard_list:           { server: port, tool: list_scorecards }

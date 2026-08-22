@@ -1,0 +1,43 @@
+{
+  "contract_id": "crypto_prices_api",
+  "contract_version": 1,
+  "owner_team": "data-platform",
+  "description": "Spot prices from a public JSON API",
+  "acquisition": {
+    "kind": "json_api",
+    "primary": {
+      "capability": "fetch_markdown",
+      "args": { "url": "https://example.test/crypto/prices", "fixture": "crypto_prices_api" }
+    },
+    "escalation_ladder": [
+      { "capability": "fetch_markdown" },
+      { "capability": "fetch_html" }
+    ],
+    "freshness_slo_seconds": 3600
+  },
+  "extraction": {
+    "strategy": "json_records",
+    "field_aliases": { "price": ["price"] }
+  },
+  "schema": {
+    "type": "object",
+    "required": ["symbol", "price"],
+    "properties": {
+      "symbol": { "type": "string", "minLength": 2 },
+      "price": { "type": "number", "minimum": 0 }
+    },
+    "additionalProperties": true,
+    "evolution_policy": "additive_only"
+  },
+  "assertions": [
+    { "id": "row_count_floor", "sql": "SELECT COUNT(*) >= 8 FROM {{table}}", "severity": "critical" },
+    { "id": "symbol_not_null", "sql": "SELECT SUM(CASE WHEN symbol IS NULL THEN 1 ELSE 0 END) = 0 FROM {{table}}", "severity": "critical" },
+    { "id": "price_null_rate", "sql": "SELECT AVG(CASE WHEN price IS NULL THEN 1.0 ELSE 0.0 END) < 0.10 FROM {{table}}", "severity": "high" },
+    { "id": "price_non_negative", "sql": "SELECT SUM(CASE WHEN price < 0 THEN 1 ELSE 0 END) = 0 FROM {{table}}", "severity": "high" }
+  ],
+  "healing": {
+    "max_autonomy_tier": 2,
+    "heal_budget_per_hour": 5,
+    "allowed_primitives": ["P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8"]
+  }
+}
