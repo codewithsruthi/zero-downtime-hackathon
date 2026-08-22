@@ -1,0 +1,12 @@
+{
+  "identifier": "scraper",
+  "title": "Scraper",
+  "icon": "Code",
+  "schema": {
+    "properties": {
+      "collector_id": { "type": "string", "title": "Collector ID" },
+      "status": { "type": "string", "title": "Status" }
+    },
+    "required": ["collector_id"]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "identifier": "service",
+  "title": "Service",
+  "icon": "Service",
+  "schema": {
+    "properties": {
+      "status": {
+        "type": "string",
+        "title": "Factory status",
+        "enum": ["UNKNOWN", "HEALTHY", "DEGRADED", "BROKEN", "HEALING", "PENDING_APPROVAL", "RECOVERED"]
+      },
+      "component": { "type": "string", "title": "Component" }
+    },
+    "required": ["status"]
+  }
+}

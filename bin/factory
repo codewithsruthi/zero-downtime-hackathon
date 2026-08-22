@@ -1,0 +1,5 @@
+#!/usr/bin/env node
+import { runFactory } from '../src/cli.js';
+
+const code = await runFactory(process.argv.slice(2), process.env);
+process.exit(code);

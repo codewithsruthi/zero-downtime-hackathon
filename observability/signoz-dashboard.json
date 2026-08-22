@@ -1,0 +1,74 @@
+{
+  "name": "Zero Downtime Factory",
+  "description": "Latency, throughput, and errors for service zero-downtime-factory",
+  "tags": ["factory", "hackathon"],
+  "widgets": [
+    {
+      "id": "latency",
+      "title": "Pipeline latency (factory.run)",
+      "panelTypes": "graph",
+      "query": {
+        "queryType": "builder",
+        "builder": {
+          "queryData": [
+            {
+              "dataSource": "traces",
+              "aggregateOperator": "p95",
+              "aggregateAttribute": { "key": "durationNano" },
+              "filters": {
+                "items": [
+                  { "key": "service.name", "op": "=", "value": "zero-downtime-factory" },
+                  { "key": "name", "op": "=", "value": "factory.run" }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "throughput",
+      "title": "Run throughput",
+      "panelTypes": "graph",
+      "query": {
+        "queryType": "builder",
+        "builder": {
+          "queryData": [
+            {
+              "dataSource": "traces",
+              "aggregateOperator": "count",
+              "filters": {
+                "items": [
+                  { "key": "service.name", "op": "=", "value": "zero-downtime-factory" },
+                  { "key": "name", "op": "=", "value": "factory.run" }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "errors",
+      "title": "Failures and heals",
+      "panelTypes": "graph",
+      "query": {
+        "queryType": "builder",
+        "builder": {
+          "queryData": [
+            {
+              "dataSource": "traces",
+              "aggregateOperator": "count",
+              "filters": {
+                "items": [
+                  { "key": "service.name", "op": "=", "value": "zero-downtime-factory" },
+                  { "key": "name", "op": "in", "value": ["factory.heal", "factory.break"] }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

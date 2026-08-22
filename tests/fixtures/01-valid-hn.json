@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-21T12:00:00.000Z",
+  "source": "https://news.ycombinator.com",
+  "collector_id": "c_hn_digest_factory",
+  "run_id": "run-test-1",
+  "story_count": 2,
+  "stories": [
+    {
+      "id": "hn-1",
+      "rank": 1,
+      "title": "Example story",
+      "url": "https://example.com/story",
+      "site": "example.com",
+      "points": 10,
+      "comment_count": 2,
+      "author": "pg",
+      "age": "1 hour ago",
+      "is_job": false
+    },
+    {
+      "id": "hn-2",
+      "rank": 2,
+      "title": "Second",
+      "url": "https://example.com/2",
+      "site": "example.com",
+      "points": 4,
+      "comment_count": 2,
+      "author": "pg",
+      "age": "1 hour ago",
+      "is_job": false
+    }
+  ]
+}

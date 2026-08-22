@@ -1,0 +1,12 @@
+---
+description: Zero Downtime Factory operator rules
+alwaysApply: true
+---
+
+SCRAPER_STUDIO_COLLECTOR_ID=c_hn_digest_factory
+
+INV-1: never write scraper output directly to data/latest.json.
+Heal is triggered, never automatic. Reuse the same Collector ID.
+Port ledger first; remote failure must not fail the pipeline.
+OTEL service name is zero-downtime-factory.
+Default FACTORY_MODE=replay.

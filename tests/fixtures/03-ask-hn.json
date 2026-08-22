@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-21T12:00:00.000Z",
+  "source": "https://news.ycombinator.com",
+  "collector_id": "c_hn_digest_factory",
+  "run_id": "run-test-1",
+  "story_count": 1,
+  "stories": [
+    {
+      "id": "hn-ask",
+      "rank": 1,
+      "title": "Ask HN: What are you working on?",
+      "url": "https://news.ycombinator.com/item?id=889",
+      "site": "news.ycombinator.com",
+      "points": 12,
+      "comment_count": 2,
+      "author": "pg",
+      "age": "1 hour ago",
+      "is_job": false
+    }
+  ]
+}

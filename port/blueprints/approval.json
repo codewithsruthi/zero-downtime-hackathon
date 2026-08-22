@@ -1,0 +1,16 @@
+{
+  "identifier": "approval",
+  "title": "Approval",
+  "icon": "Unlock",
+  "schema": {
+    "properties": {
+      "collector_id": { "type": "string", "title": "Collector ID" },
+      "status": {
+        "type": "string",
+        "title": "Status",
+        "enum": ["none", "pending", "approved", "rejected"]
+      }
+    },
+    "required": ["status"]
+  }
+}

@@ -1,40 +1,38 @@
-# Byte-compiled / cache
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-htmlcov/
-
-# Virtual environments
-.venv/
-venv/
-env/
-
-# Environment and secrets
+# Secrets
 .env
 .env.*
 !.env.example
 
-# OS / editor
+# Dependencies
+node_modules/
+
+# Runtime factory state (INV-1: never commit latest/candidate/state)
+data/latest.json
+data/candidate.json
+data/state.json
+data/.factory.lock
+data/.broken
+data/.healed
+data/raw/*
+!data/raw/.gitkeep
+data/snapshots/*
+!data/snapshots/.gitkeep
+port/state/*
+!port/state/.gitkeep
+
+# Logs and junk
+*.log
+tmp/
 .DS_Store
 .idea/
 .vscode/
 *.swp
 
-# uv / packaging
-*.egg-info/
-dist/
-build/
+# Python leftovers from the scaffold
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
 
-# Jupyter
-.ipynb_checkpoints/
-
-# Logs and local data
-*.log
-data/
-tmp/
+# OS
+Thumbs.db

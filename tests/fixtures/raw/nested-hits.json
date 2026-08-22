@@ -1,0 +1,20 @@
+{
+  "hits": [
+    {
+      "objectID": "11",
+      "title": "Nested",
+      "url": "https://nested.example/a",
+      "score": "15",
+      "num_comments": "3",
+      "author": "alice"
+    },
+    {
+      "objectID": "12",
+      "headline": "Other",
+      "link": "https://nested.example/b",
+      "points_count": 2,
+      "comments": 1,
+      "by": "bob"
+    }
+  ]
+}

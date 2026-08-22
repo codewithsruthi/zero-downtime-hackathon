@@ -1,0 +1,16 @@
+{
+  "01-valid-hn.json": { "ok": true, "failed": [] },
+  "02-job-posts.json": { "ok": true, "failed": [] },
+  "03-ask-hn.json": { "ok": true, "failed": [] },
+  "04-empty-stories.json": { "ok": false, "failed": ["G6"] },
+  "05-missing-title.json": { "ok": false, "failed": ["G7"] },
+  "06-invalid-url.json": { "ok": false, "failed": ["G8"] },
+  "07-duplicate-urls.json": { "ok": false, "failed": ["G10"] },
+  "08-not-object.json": { "ok": false, "failed": ["G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9", "G10", "G11"] },
+  "09-missing-generated-at.json": { "ok": false, "failed": ["G3"] },
+  "10-wrong-schema.json": { "ok": false, "failed": ["G2"] },
+  "11-missing-source.json": { "ok": false, "failed": ["G4"] },
+  "12-negative-points.json": { "ok": false, "failed": ["G9"] },
+  "13-missing-run-id.json": { "ok": false, "failed": ["G11"] },
+  "14-empty-title.json": { "ok": false, "failed": ["G7"] }
+}

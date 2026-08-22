@@ -1,0 +1,39 @@
+:root {
+  color: #111;
+  background: #f6f6ef;
+  font-family: Georgia, "Times New Roman", serif;
+}
+body {
+  margin: 0;
+}
+main {
+  max-width: 42rem;
+  margin: 2rem auto;
+  padding: 0 1rem 3rem;
+}
+h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+.banner {
+  color: #444;
+  font-size: 0.95rem;
+}
+ol {
+  padding-left: 1.4rem;
+}
+li {
+  margin: 0.6rem 0;
+}
+li a {
+  color: #000;
+}
+.meta {
+  display: block;
+  color: #666;
+  font-size: 0.85rem;
+}
+.empty {
+  list-style: none;
+  margin-left: -1.4rem;
+}

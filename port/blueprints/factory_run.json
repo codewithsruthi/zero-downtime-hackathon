@@ -1,0 +1,13 @@
+{
+  "identifier": "factory_run",
+  "title": "Factory run",
+  "icon": "Deployment",
+  "schema": {
+    "properties": {
+      "collector_id": { "type": "string", "title": "Collector ID" },
+      "status": { "type": "string", "title": "Status" },
+      "story_count": { "type": "number", "title": "Story count" }
+    },
+    "required": ["status"]
+  }
+}
