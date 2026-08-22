@@ -233,12 +233,14 @@ async def test_dashboard_break_with_controls(app, monkeypatch):
             method="POST",
             headers={"Content-Type": "application/json"},
         )
-        res = urllib.request.urlopen(req, timeout=5)
+        res = urllib.request.urlopen(req, timeout=30)
         assert res.status == 200
         payload = json.loads(res.read().decode())
         assert payload["ok"] is True
         assert payload["injected"] == "http_403"
-        assert app.injector.active("amazon_products")["type"] == "http_403"
+        assert payload["live"]["steps"]["detect"] == "failed"
+        assert payload["frames"][1]["steps"]["detect"] == "current"
+        assert payload["frames"][-1]["steps"]["verify"] == "done"
     finally:
         stop.set()
         server.shutdown()

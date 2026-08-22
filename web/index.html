@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HYDRA · Amazon catalog reliability</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("hydra-theme");
+        if (t !== "light" && t !== "dark") t = "dark";
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    })();
+  </script>
+</head>
+<body>
+  <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
+  <header>
+    <div class="brand">
+      <h1>HYDRA</h1>
+      <p>Amazon catalog reliability</p>
+      <p class="byline">
+        <a href="https://www.linkedin.com/in/sruthi-anuvalasetty/" target="_blank" rel="noopener noreferrer">Sruthi Anuvalasetty</a>
+        ·
+        <a href="https://www.linkedin.com/in/ramachandra-nalam/" target="_blank" rel="noopener noreferrer">Ramachandra Nalam</a>
+      </p>
+    </div>
+    <div class="header-end">
+      <div class="meta">
+        <div>Vercel · <span id="deployEnv">waiting</span></div>
+        <div><span id="health" class="pill">healthy</span> · serving last-good fixture</div>
+      </div>
+    </div>
+  </header>
+  <p class="banner">This is the public Vercel build. Break / heal still runs on the live dashboard.</p>
+  <div class="controls">
+    <a class="btn" id="liveLink" href="http://2.29.4.204:8080">Open live dashboard</a>
+    <span class="hint">Detect → Classify → Guard → Act → Verify. Dark / Light stays pinned at the bottom left.</span>
+  </div>
+  <main>
+    <section class="catalog">
+      <h2>Amazon catalog</h2>
+      <div id="products" class="grid"><p class="empty">Loading catalog…</p></div>
+    </section>
+    <section class="scores">
+      <h2>This deployment</h2>
+      <div class="board" id="deployBoard"></div>
+      <h3 class="board-title">What Vercel ships</h3>
+      <p class="note">Every commit to GitHub builds this page. The interactive Amazon heal loop stays on the server so last-good catalog state is not lost on a serverless restart.</p>
+    </section>
+  </main>
+  <footer>
+    <div id="updated">Waiting for deploy metadata…</div>
+    <a href="https://github.com/codewithsruthi/zero-downtime-hackathon" target="_blank" rel="noopener noreferrer">Repository</a>
+  </footer>
+  <div class="theme" role="group" aria-label="Color theme">
+    <button type="button" id="themeDark" data-theme-set="dark" aria-pressed="true">Dark</button>
+    <button type="button" id="themeLight" data-theme-set="light" aria-pressed="false">Light</button>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -47,3 +47,13 @@ hydra-live.duckdb.wal
 
 # OS
 Thumbs.db
+
+# Vercel
+.vercel/
+web/catalog.json
+web/deploy-meta.json
+.tools/
+.npm-cache/
+.npm-tmp/
+.vercel
+.env*

@@ -11,7 +11,8 @@
   },
   "scripts": {
     "test": "node --test --test-concurrency=1 tests/unit/*.test.js tests/integration/*.test.js tests/chaos/*.test.js tests/app/*.test.js tests/demo/*.test.js",
-    "start": "node --import ./app/instrumentation.js app/server.js"
+    "start": "node --import ./app/instrumentation.js app/server.js",
+    "vercel-build": "node scripts/vercel-build.mjs"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
