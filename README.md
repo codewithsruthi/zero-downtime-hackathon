@@ -10,9 +10,9 @@
 
 **Judges, open this:**
 
-# [http://2.29.4.204:8080](http://2.29.4.204:8080)
+# [https://zero-downtime-hackathon-dusky.vercel.app](https://zero-downtime-hackathon-dusky.vercel.app)
 
-Copy-paste version (for Vercel or the submission form): see [`DASHBOARD.md`](DASHBOARD.md).
+Live on Vercel from GitHub `main`. Server copy: [http://2.29.4.204:8080](http://2.29.4.204:8080). Copy-paste URL: [`DASHBOARD.md`](DASHBOARD.md).
 
 No Port login. No SigNoz login. Choose a fault, click **Break Amazon**, watch Detect → Classify → Guard → Act → Verify. Dark / Light stays pinned at the bottom left.
 
