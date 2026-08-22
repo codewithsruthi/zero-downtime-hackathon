@@ -28,7 +28,12 @@ def captcha_wall(_payload, _cfg):
 
 
 @fault("selector_drift")
-def selector_drift(payload, _cfg):
+def selector_drift(payload, cfg):
+    # Amazon JSON has no CSS classes; empty=true simulates an extractor miss.
+    if cfg.get("empty"):
+        stripped = payload.lstrip()
+        if stripped.startswith("{") or stripped.startswith("["):
+            return "[]"
     return re.sub(r'class="(repo|item|row)-', r'class="v2-\1-', payload)
 
 
@@ -47,10 +52,16 @@ def field_rename(payload, cfg):
 def type_change(payload, cfg):
     data = json.loads(payload)
     field = cfg.get("field", "stars")
+    rate = float(cfg.get("rate", 1.0))
+    rng = random.Random(cfg.get("seed", 42))
+    incompatible = bool(cfg.get("incompatible"))
     records = data if isinstance(data, list) else [data]
     for rec in records:
-        if field in rec and rec[field] is not None:
-            rec[field] = str(rec[field])
+        if field not in rec or rec[field] is None:
+            continue
+        if rng.random() > rate:
+            continue
+        rec[field] = "n/a" if incompatible else str(rec[field])
     return json.dumps(data)
 
 

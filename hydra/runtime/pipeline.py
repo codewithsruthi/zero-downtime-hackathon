@@ -11,7 +11,7 @@ from hydra.runtime.acquire import Acquirer
 from hydra.runtime.parse import parse_payload
 from hydra.runtime.validate import partition_rows, schema_errors
 from hydra.store import Store
-from hydra.telemetry import stage_span
+from hydra.telemetry import current_trace_id, stage_span
 
 _SELECT_ONLY = re.compile(r"^\s*SELECT\b", re.IGNORECASE)
 
@@ -33,6 +33,7 @@ class RunResult:
     error_type: str | None = None
     error_message: str | None = None
     snapshot_id: str | None = None
+    trace_id: str | None = None
     rows: list[dict[str, Any]] = field(default_factory=list)
 
 
@@ -55,30 +56,56 @@ class Pipeline:
         run_id = new_id("run")
         started = now()
         result = RunResult(run_id=run_id, source_id=source_id, status="ok")
-        try:
-            if assertions_only:
-                await self._assert_existing(contract, result)
-            elif skip_acquire:
-                await self._from_snapshot(contract, result, snapshot)
-            else:
-                await self._full(contract, result)
-        except AcquisitionError as exc:
-            result.status = "failed"
-            result.stage = "acquire"
-            result.span_status = "ERROR"
-            result.http_status = exc.http_status
-            result.error_type = exc.error_type
-            result.error_message = str(exc)
-        except Exception as exc:
-            result.status = "failed"
-            result.stage = result.stage or "load"
-            result.span_status = "ERROR"
-            result.error_type = type(exc).__name__
-            result.error_message = str(exc)
+        with stage_span(
+            "hydra.ingest",
+            source_id,
+            run_id,
+            contract_version=contract.get("contract_version", 1),
+        ) as root:
+            try:
+                if assertions_only:
+                    await self._assert_existing(contract, result)
+                elif skip_acquire:
+                    await self._from_snapshot(contract, result, snapshot)
+                else:
+                    await self._full(contract, result)
+            except AcquisitionError as exc:
+                result.status = "failed"
+                result.stage = "acquire"
+                result.span_status = "ERROR"
+                result.http_status = exc.http_status
+                result.error_type = exc.error_type
+                result.error_message = str(exc)
+            except Exception as exc:
+                result.status = "failed"
+                result.stage = result.stage or "load"
+                result.span_status = "ERROR"
+                result.error_type = type(exc).__name__
+                result.error_message = str(exc)
+            if result.status == "ok" and result.failed_assertions:
+                result.status = "failed"
+                result.stage = result.stage or "validate"
+            if result.status == "ok" and result.schema_errors:
+                result.status = "failed"
+                result.stage = result.stage or "validate"
+                result.error_type = result.error_type or "SchemaError"
+                result.error_message = result.error_message or f"{result.schema_errors} schema errors"
+            result.trace_id = current_trace_id()
+            root.set_attribute("hydra.rows_in", result.rows_in)
+            root.set_attribute("hydra.rows_out", result.rows_out)
+            if result.status != "ok":
+                try:
+                    from opentelemetry.trace import Status, StatusCode
+
+                    root.set_status(Status(StatusCode.ERROR, result.error_type or result.status))
+                except Exception:
+                    pass
+                if result.error_type:
+                    root.set_attribute(
+                        "hydra.error_signature",
+                        f"{result.error_type}:{(result.error_message or '')[:200]}",
+                    )
         ended = now()
-        if result.status == "ok" and result.failed_assertions:
-            result.status = "failed"
-            result.stage = result.stage or "validate"
         self.store.record_run(
             {
                 "run_id": run_id,
@@ -100,6 +127,7 @@ class Pipeline:
                     if result.error_type
                     else None
                 ),
+                "trace_id": result.trace_id,
             }
         )
         if result.assertion_results:
@@ -130,9 +158,10 @@ class Pipeline:
 
     async def _from_snapshot(self, contract: dict[str, Any], result: RunResult, snapshot: dict[str, Any] | None) -> None:
         source_id = contract["contract_id"]
-        snap = snapshot or self.store.latest_good_raw(source_id) or self.store.latest_raw(source_id)
-        if snap is None:
-            raise RuntimeError(f"no raw snapshot for {source_id}")
+        with stage_span("acquire", source_id, result.run_id, replay=True):
+            snap = snapshot or self.store.latest_good_raw(source_id) or self.store.latest_raw(source_id)
+            if snap is None:
+                raise RuntimeError(f"no raw snapshot for {source_id}")
         result.snapshot_id = snap["snapshot_id"]
         result.http_status = snap.get("http_status") or 200
         await self._parse_load_assert(contract, result, snap["payload"], snapshot_id=snap["snapshot_id"])

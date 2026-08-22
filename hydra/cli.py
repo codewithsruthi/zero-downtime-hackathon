@@ -24,6 +24,7 @@ def main(argv: list[str] | None = None) -> int:
     p_break.add_argument("--field")
     p_break.add_argument("--rate", type=float)
     p_break.add_argument("--at", type=int)
+    p_break.add_argument("--keep", type=int)
 
     p_heal = sub.add_parser("heal", help="run one detect-and-heal sweep")
     p_heal.add_argument("--source")
@@ -41,7 +42,31 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("demo", help="offline demo: ingest, break, heal")
 
+    p_dash = sub.add_parser("dashboard", help="publishable live Amazon dashboard")
+    p_dash.add_argument("--watch", action="store_true", help="ingest amazon and heal on failure")
+    p_dash.add_argument("--host", help="bind address (default HYDRA_DASHBOARD_BIND or 0.0.0.0)")
+    p_dash.add_argument("--port", type=int, help="bind port (default HYDRA_DASHBOARD_PORT or 8080)")
+    p_dash.add_argument("--source", default="amazon_products")
+
+    p_live = sub.add_parser(
+        "dashboard-live",
+        help="isolated live Bright Data dashboard for judging (does not touch :8080 replay)",
+    )
+    p_live.add_argument("--watch", action="store_true", help="ingest amazon from Bright Data and heal on failure")
+    p_live.add_argument("--host", help="bind address (default HYDRA_DASHBOARD_BIND or 0.0.0.0)")
+    p_live.add_argument("--port", type=int, help="bind port (default 8081)")
+    p_live.add_argument("--source", default="amazon_products")
+
     args = parser.parse_args(argv)
+    if args.cmd == "dashboard":
+        from hydra.dashboard import serve_forever
+
+        return serve_forever(watch=args.watch, host=args.host, port=args.port, source=args.source)
+    if args.cmd == "dashboard-live":
+        from hydra.dashboard_live import serve_forever as serve_live
+
+        return serve_live(watch=args.watch, host=args.host, port=args.port, source=args.source)
+
     app = HydraApp()
     try:
         return asyncio.run(_dispatch(app, args))
@@ -74,16 +99,19 @@ async def _dispatch(app: HydraApp, args) -> int:
             cfg["rate"] = args.rate
         if args.at is not None:
             cfg["at"] = args.at
+        if args.keep is not None:
+            cfg["keep"] = args.keep
         app.break_source(args.source, args.fault, **cfg)
         print(f"injected {args.fault} on {args.source}")
         return 0
 
     if args.cmd == "heal":
-        resolutions = await app.loop.sweep_and_heal(args.source)
+        resolutions = await app.heal_source(args.source)
         print(json.dumps({"resolutions": resolutions}, indent=2))
         return 0
 
     if args.cmd == "status":
+        app.refresh_live()
         board = app.store.scoreboard()
         states = app.store.query("SELECT * FROM source_state")
         print(json.dumps({"sources": states, "scoreboard": board}, indent=2, default=str))
@@ -119,7 +147,7 @@ async def _demo(app: HydraApp) -> int:
     broken = await app.ingest("gh_trending_repos")
     _print_run(broken)
     print("== heal ==")
-    print(await app.loop.sweep_and_heal("gh_trending_repos"))
+    print(await app.heal_source("gh_trending_repos"))
     return 0
 
 
@@ -127,6 +155,7 @@ def _print_run(result) -> None:
     print(
         f"{result.source_id}: {result.status} rows={result.rows_out} "
         f"failed={result.failed_assertions} err={result.error_type}"
+        f"{' trace=' + result.trace_id if getattr(result, 'trace_id', None) else ''}"
     )
 
 

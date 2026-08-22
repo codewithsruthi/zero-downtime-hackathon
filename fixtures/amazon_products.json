@@ -1,0 +1,12 @@
+[
+  {"asin": "B0CHHSFMRL", "title": "Apple AirPods Pro (2nd Generation)", "price": 189.99, "currency": "USD", "rating": 4.7, "brand": "Apple", "availability": "In Stock", "url": "https://www.amazon.com/dp/B0CHHSFMRL"},
+  {"asin": "B09V3KXJPB", "title": "Amazon Echo Dot (5th Gen)", "price": 49.99, "currency": "USD", "rating": 4.7, "brand": "Amazon", "availability": "In Stock", "url": "https://www.amazon.com/dp/B09V3KXJPB"},
+  {"asin": "B0BDJ279KF", "title": "Kindle Paperwhite (16 GB)", "price": 139.99, "currency": "USD", "rating": 4.6, "brand": "Amazon", "availability": "In Stock", "url": "https://www.amazon.com/dp/B0BDJ279KF"},
+  {"asin": "B0BSHF7WHW", "title": "Fire TV Stick 4K", "price": 49.99, "currency": "USD", "rating": 4.7, "brand": "Amazon", "availability": "In Stock", "url": "https://www.amazon.com/dp/B0BSHF7WHW"},
+  {"asin": "B0D1XD1ZV3", "title": "Apple AirTag 4 Pack", "price": 99.00, "currency": "USD", "rating": 4.8, "brand": "Apple", "availability": "In Stock", "url": "https://www.amazon.com/dp/B0D1XD1ZV3"},
+  {"asin": "B09G9FPHY6", "title": "Echo Show 5 (3rd Gen)", "price": 89.99, "currency": "USD", "rating": 4.6, "brand": "Amazon", "availability": "In Stock", "url": "https://www.amazon.com/dp/B09G9FPHY6"},
+  {"asin": "B0BSHF7T3T", "title": "Fire TV Stick HD", "price": 29.99, "currency": "USD", "rating": 4.6, "brand": "Amazon", "availability": "In Stock", "url": "https://www.amazon.com/dp/B0BSHF7T3T"},
+  {"asin": "B0C1H26C46", "title": "Kindle (2022 release)", "price": 99.99, "currency": "USD", "rating": 4.6, "brand": "Amazon", "availability": "In Stock", "url": "https://www.amazon.com/dp/B0C1H26C46"},
+  {"asin": "B0CQT1Y6XC", "title": "Apple AirPods (3rd Generation)", "price": 169.00, "currency": "USD", "rating": 4.6, "brand": "Apple", "availability": "In Stock", "url": "https://www.amazon.com/dp/B0CQT1Y6XC"},
+  {"asin": "B0C26B8PQ7", "title": "Echo Pop", "price": 39.99, "currency": "USD", "rating": 4.6, "brand": "Amazon", "availability": "In Stock", "url": "https://www.amazon.com/dp/B0C26B8PQ7"}
+]

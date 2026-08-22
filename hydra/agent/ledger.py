@@ -12,13 +12,14 @@ class Ledger:
         self.pool = pool
 
     async def open_incident(self, ctx) -> None:
+        detected = now()
         self.store.open_incident(
             {
                 "incident_id": ctx.incident_id,
                 "source_id": ctx.source_id,
                 "fingerprint": ctx.fingerprint,
                 "failure_class": ctx.failure_class,
-                "detected_at": now(),
+                "detected_at": detected,
                 "trace_id": ctx.evidence.trace_id,
             }
         )
@@ -29,9 +30,11 @@ class Ledger:
             {
                 "failure_class": ctx.failure_class,
                 "fingerprint": ctx.fingerprint,
-                "detected_at": now().isoformat(),
+                "detected_at": detected.isoformat(),
                 "resolution": "open",
+                "trace_id": ctx.evidence.trace_id or "",
             },
+            relations={"source": ctx.source_id},
         )
 
     async def close_incident(self, ctx, resolution: str, mttr_s: float) -> None:
@@ -39,11 +42,27 @@ class Ledger:
         health = "healthy" if resolution == "healed" else "failed"
         circuit = "open" if resolution == "escalated" else None
         self.store.upsert_source_state(ctx.source_id, health=health, circuit_state=circuit)
+        await self._port_upsert(
+            "hydra_incident",
+            ctx.incident_id,
+            {
+                "failure_class": ctx.failure_class,
+                "fingerprint": ctx.fingerprint,
+                "detected_at": now().isoformat(),
+                "resolved_at": now().isoformat(),
+                "mttr_seconds": round(mttr_s, 3),
+                "resolution": resolution,
+                "attempts": ctx.attempt,
+                "trace_id": ctx.evidence.trace_id or "",
+            },
+            relations={"source": ctx.source_id},
+        )
 
     async def record_attempt(self, ctx, primitive, result, *, verified, delta=None, approved_by=None) -> None:
+        heal_id = new_id("heal")
         self.store.record_heal(
             {
-                "heal_id": new_id("heal"),
+                "heal_id": heal_id,
                 "incident_id": ctx.incident_id,
                 "source_id": ctx.source_id,
                 "fingerprint": ctx.fingerprint,
@@ -59,6 +78,20 @@ class Ledger:
                 "after_state": json.dumps((delta or {}).get("after")),
                 "notes": result.notes,
             }
+        )
+        await self._port_upsert(
+            "hydra_heal_action",
+            heal_id,
+            {
+                "primitive": primitive.id,
+                "autonomy_tier": primitive.tier,
+                "attempt": ctx.attempt,
+                "approved_by": approved_by or "",
+                "verification_passed": verified,
+                "before_state": json.dumps((delta or {}).get("before")),
+                "after_state": json.dumps((delta or {}).get("after")),
+            },
+            relations={"incident": ctx.incident_id},
         )
 
     async def record_blocked(self, ctx, primitive, reason: str) -> None:
@@ -90,15 +123,30 @@ class Ledger:
             },
         )
 
-    async def _port_upsert(self, blueprint: str, identifier: str, properties: dict) -> None:
+    async def _port_upsert(
+        self,
+        blueprint: str,
+        identifier: str,
+        properties: dict,
+        relations: dict | None = None,
+    ) -> None:
+        try:
+            from hydra.port_rest import port_configured, upsert_entity
+
+            if port_configured():
+                upsert_entity(blueprint, identifier, properties, relations=relations)
+        except Exception:
+            pass
         if self.pool is None:
             return
         try:
-            await self.pool.invoke(
-                "catalog_upsert_entity",
-                blueprint=blueprint,
-                identifier=identifier,
-                properties=properties,
-            )
+            payload = {
+                "blueprint": blueprint,
+                "identifier": identifier,
+                "properties": properties,
+            }
+            if relations:
+                payload["relations"] = relations
+            await self.pool.invoke("catalog_upsert_entity", **payload)
         except Exception:
             return

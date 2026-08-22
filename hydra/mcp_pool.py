@@ -58,6 +58,14 @@ class MCPPool:
         )
 
     def _replay(self, capability: str, args: dict[str, Any]) -> Any:
+        if capability == "scrape_dataset":
+            slug = str(args.get("fixture") or args.get("dataset_id") or "amazon_products")
+            if self.fixtures_dir:
+                for name in (slug, "amazon_products"):
+                    path = self.fixtures_dir / f"{name}.json"
+                    if path.exists():
+                        return path.read_text()
+            return "[]"
         if capability in {"fetch_markdown", "fetch_html", "ai_extract", "browser_get_html"}:
             url = str(args.get("url") or "")
             return self._fixture_for_url(url, html=capability != "fetch_markdown")

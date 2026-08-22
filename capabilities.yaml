@@ -1,5 +1,14 @@
 capabilities:
 
+  scrape_dataset:
+    server: brightdata
+    tool: datasets_v3_scrape
+    args:
+      dataset_id: "{dataset_id}"
+      collection_id: "{collection_id}"
+      urls: "{urls}"
+    rung: 0
+
   fetch_markdown:
     server: brightdata
     tool: scrape_as_markdown

@@ -16,8 +16,11 @@ from hydra.factory import HydraApp
 def app(tmp_path, monkeypatch):
     monkeypatch.setenv("HYDRA_MODE", "replay")
     monkeypatch.setenv("HYDRA_OTEL_DISABLED", "1")
+    monkeypatch.setenv("HYDRA_PORT_DISABLED", "1")
     monkeypatch.setenv("HYDRA_BACKOFF_BASE_S", "0")
     monkeypatch.setenv("HYDRA_ROOT", str(ROOT))
+    monkeypatch.delenv("HYDRA_LIVE_PATH", raising=False)
+    monkeypatch.delenv("HYDRA_FAULTS_PATH", raising=False)
     instance = HydraApp(db_path=tmp_path / "hydra.duckdb")
     yield instance
     instance.close()

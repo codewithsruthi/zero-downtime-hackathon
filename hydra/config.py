@@ -12,6 +12,18 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
+def load_dotenv(root: Path | None = None) -> None:
+    path = (root or _repo_root()) / ".env"
+    if not path.is_file():
+        return
+    for raw in path.read_text().splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip().strip("'").strip('"'))
+
+
 @dataclass
 class HydraConfig:
     mode: str
@@ -38,6 +50,7 @@ class HydraConfig:
 
 def load_config(repo_root: Path | None = None) -> HydraConfig:
     root = Path(repo_root).resolve() if repo_root else _repo_root()
+    load_dotenv(root)
     mode = os.environ.get("HYDRA_MODE", "replay").strip().lower()
     db = Path(os.environ.get("HYDRA_DB_PATH", str(root / "hydra.duckdb")))
     return HydraConfig(

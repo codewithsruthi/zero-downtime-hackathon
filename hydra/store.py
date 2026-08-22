@@ -430,6 +430,48 @@ class Store:
         rows = self.query("SELECT * FROM source_state WHERE source_id = ?", [source_id])
         return rows[0] if rows else None
 
+    def reset_heal_window(self, source_id: str) -> None:
+        """Give the source a fresh hourly budget (demo reset)."""
+        cutoff = now() - timedelta(hours=1)
+        self.con.execute(
+            "DELETE FROM heal_ledger WHERE source_id = ? AND started_at > ?",
+            [source_id, cutoff],
+        )
+        self.con.execute(
+            "DELETE FROM incident WHERE source_id = ? AND detected_at > ?",
+            [source_id, cutoff],
+        )
+        self.con.execute(
+            "DELETE FROM pending_approval WHERE source_id = ?",
+            [source_id],
+        )
+
+    def clear_stale_guard(self, source_id: str) -> None:
+        """If the latest scrape is healthy, drop leftover Guard / approval state."""
+        last = self.query(
+            """
+            SELECT status FROM pipeline_run
+            WHERE source_id = ?
+            ORDER BY started_at DESC
+            LIMIT 1
+            """,
+            [source_id],
+        )
+        if not last or last[0]["status"] not in {"ok", "healed"}:
+            return
+        self.con.execute(
+            "DELETE FROM pending_approval WHERE source_id = ? AND status = 'pending'",
+            [source_id],
+        )
+        self.con.execute(
+            """
+            UPDATE incident
+            SET resolution = 'healed', resolved_at = COALESCE(resolved_at, ?)
+            WHERE source_id = ? AND resolution = 'open'
+            """,
+            [now(), source_id],
+        )
+
     def heals_in_last_hour(self, source_id: str) -> int:
         cutoff = now() - timedelta(hours=1)
         row = self.con.execute(
@@ -587,6 +629,131 @@ class Store:
             "by_class": mttr,
             "autonomy_pct": autonomy[0]["autonomy_pct"] if autonomy else None,
             "incidents": incidents,
+        }
+
+    def reliability_metrics(self, source_id: str, *, budget: int = 5) -> dict[str, Any]:
+        """Judge-facing latency and heal rates for one source."""
+
+        def _s(value: Any) -> float | None:
+            if value is None:
+                return None
+            try:
+                out = float(value)
+            except (TypeError, ValueError):
+                return None
+            return round(max(out, 0.0), 3)
+
+        rows = self.query(
+            """
+            WITH first_heal AS (
+                SELECT incident_id, MIN(started_at) AS first_heal_at
+                FROM heal_ledger
+                WHERE source_id = ?
+                GROUP BY incident_id
+            ),
+            failed_run AS (
+                SELECT i.incident_id,
+                       (
+                           SELECT r.started_at
+                           FROM pipeline_run r
+                           WHERE r.source_id = i.source_id
+                             AND r.status = 'failed'
+                             AND r.started_at <= i.detected_at
+                           ORDER BY r.started_at DESC
+                           LIMIT 1
+                       ) AS failed_at
+                FROM incident i
+                WHERE i.source_id = ?
+            )
+            SELECT
+                i.incident_id,
+                i.detected_at,
+                i.resolved_at,
+                i.mttr_seconds,
+                i.resolution,
+                i.fingerprint,
+                CASE WHEN f.failed_at IS NULL THEN NULL
+                     ELSE EPOCH(i.detected_at) - EPOCH(f.failed_at) END AS mttd_s,
+                CASE WHEN h.first_heal_at IS NULL THEN NULL
+                     ELSE EPOCH(h.first_heal_at) - EPOCH(i.detected_at) END AS mtta_s
+            FROM incident i
+            LEFT JOIN failed_run f ON f.incident_id = i.incident_id
+            LEFT JOIN first_heal h ON h.incident_id = i.incident_id
+            WHERE i.source_id = ?
+            ORDER BY i.detected_at DESC
+            """,
+            [source_id, source_id, source_id],
+        )
+        last = rows[0] if rows else None
+        mttd_vals = [_s(r["mttd_s"]) for r in rows if r.get("mttd_s") is not None]
+        mtta_vals = [_s(r["mtta_s"]) for r in rows if r.get("mtta_s") is not None]
+        mttr_vals = [_s(r["mttr_seconds"]) for r in rows if r.get("mttr_seconds") is not None]
+        healed = [r for r in rows if r.get("resolution") == "healed"]
+        false_row = self.query(
+            """
+            SELECT COUNT(*) AS n
+            FROM incident a
+            WHERE a.source_id = ?
+              AND a.resolution = 'healed'
+              AND a.resolved_at IS NOT NULL
+              AND EXISTS (
+                  SELECT 1 FROM pipeline_run p
+                  WHERE p.source_id = a.source_id
+                    AND p.status = 'failed'
+                    AND p.started_at > a.resolved_at
+                    AND (EPOCH(p.started_at) - EPOCH(a.resolved_at)) < 15
+              )
+            """,
+            [source_id],
+        )
+        false_heals = int((false_row[0]["n"] or 0) if false_row else 0)
+
+        ended = self.query(
+            """
+            SELECT
+                COUNT(*) AS n,
+                SUM(CASE WHEN verification_passed THEN 1 ELSE 0 END) AS passed
+            FROM heal_ledger
+            WHERE source_id = ? AND ended_at IS NOT NULL
+            """,
+            [source_id],
+        )
+        ended_n = int((ended[0]["n"] or 0) if ended else 0)
+        passed_n = int((ended[0]["passed"] or 0) if ended else 0)
+        finished = [
+            r
+            for r in rows
+            if r.get("resolution") and r.get("resolution") != "open"
+        ]
+        healed_n = len(healed)
+        finished_n = len(finished)
+        autonomy = self.query(
+            """
+            SELECT ROUND(100.0 * AVG(CASE WHEN approved_by IS NULL THEN 1.0 ELSE 0.0 END), 1) AS autonomy_pct
+            FROM heal_ledger
+            WHERE source_id = ? AND verification_passed = TRUE
+            """,
+            [source_id],
+        )
+        used = self.heals_in_last_hour(source_id)
+        return {
+            "mttd_last_s": _s(last["mttd_s"]) if last else None,
+            "mttd_avg_s": _s(sum(mttd_vals) / len(mttd_vals)) if mttd_vals else None,
+            "mtta_last_s": _s(last["mtta_s"]) if last else None,
+            "mtta_avg_s": _s(sum(mtta_vals) / len(mtta_vals)) if mtta_vals else None,
+            "mttr_last_s": _s(last["mttr_seconds"]) if last else None,
+            "mttr_avg_s": _s(sum(mttr_vals) / len(mttr_vals)) if mttr_vals else None,
+            "heal_success_pct": _s(100.0 * healed_n / finished_n) if finished_n else None,
+            "heal_attempts": ended_n,
+            "heals_verified": passed_n,
+            "incidents_finished": finished_n,
+            "false_heal_rate_pct": _s(100.0 * false_heals / len(healed)) if healed else None,
+            "false_heals": false_heals,
+            "autonomy_pct": autonomy[0]["autonomy_pct"] if autonomy else None,
+            "budget_used": used,
+            "budget_cap": int(budget),
+            "incidents": len(rows),
+            "incidents_healed": len(healed),
         }
 
 

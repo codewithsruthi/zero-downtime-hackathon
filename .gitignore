@@ -2,6 +2,8 @@
 .env
 .env.*
 !.env.example
+.mcp.json
+.cursor/mcp.json
 
 # Dependencies
 node_modules/
@@ -10,6 +12,11 @@ node_modules/
 data/latest.json
 data/candidate.json
 data/state.json
+data/demo-last.json
+data/hydra-live.json
+data/hydra-faults.json
+data/hydra-judge.json
+data/hydra-judge-faults.json
 data/.factory.lock
 data/.broken
 data/.healed
@@ -35,6 +42,8 @@ __pycache__/
 .mypy_cache/
 hydra.duckdb
 hydra.duckdb.wal
+hydra-live.duckdb
+hydra-live.duckdb.wal
 
 # OS
 Thumbs.db

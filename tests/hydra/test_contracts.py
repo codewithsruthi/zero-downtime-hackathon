@@ -9,7 +9,12 @@ def test_seed_contracts_validate():
     meta = load_meta_schema(ROOT / "contracts" / "_meta.schema.json")
     registry = ContractRegistry(ROOT / "contracts", meta_schema=meta)
     registry.load_seed()
-    assert registry.ids() == ["city_open_data", "crypto_prices_api", "gh_trending_repos"]
+    assert registry.ids() == [
+        "amazon_products",
+        "city_open_data",
+        "crypto_prices_api",
+        "gh_trending_repos",
+    ]
     for cid in registry.ids():
         contract = registry.get(cid)
         assert len(contract["assertions"]) >= 3

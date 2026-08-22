@@ -5,6 +5,7 @@ import pytest
 async def test_three_seed_sources_ingest(app):
     results = await app.ingest_all()
     assert [r.source_id for r in results] == [
+        "amazon_products",
         "city_open_data",
         "crypto_prices_api",
         "gh_trending_repos",

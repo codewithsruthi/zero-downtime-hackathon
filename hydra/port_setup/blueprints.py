@@ -112,6 +112,26 @@ BLUEPRINTS = [
             "required": ["successful_primitive"],
         },
     },
+    {
+        "identifier": "hydra_product",
+        "title": "Amazon Product",
+        "icon": "Box",
+        "schema": {
+            "properties": {
+                "asin": {"type": "string"},
+                "title": {"type": "string"},
+                "price": {"type": "number"},
+                "currency": {"type": "string"},
+                "rating": {"type": "number"},
+                "availability": {"type": "string"},
+                "url": {"type": "string", "format": "url"},
+            },
+            "required": ["asin", "title"],
+        },
+        "relations": {
+            "source": {"target": "hydra_source", "required": True, "many": False}
+        },
+    },
 ]
 
 SCORECARD = {

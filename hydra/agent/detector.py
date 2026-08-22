@@ -36,6 +36,7 @@ class Detector:
                     failed_assertions=self._failed_ids(run["run_id"]),
                     seconds_since_success=self.store.seconds_since_success(run["source_id"]),
                     run_id=run["run_id"],
+                    trace_id=run.get("trace_id"),
                 )
             )
             _ = contract

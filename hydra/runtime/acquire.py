@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from hydra.chaos.injector import ChaosInjector
 from hydra.errors import AcquisitionError
+from hydra.runtime.datasets import scrape_dataset
 
 
 @dataclass
@@ -38,11 +40,18 @@ class Acquirer:
         current = max(0, min(current, len(ladder) - 1))
         capability = ladder[current]["capability"]
         primary = contract["acquisition"]["primary"]
-        url = (primary.get("args") or {}).get("url")
-        fixture_name = (primary.get("args") or {}).get("fixture") or contract["contract_id"]
-        payload = self._load_fixture(fixture_name, capability)
-        if payload is None and self.pool is not None and self.mode == "live":
-            payload = await self.pool.invoke(capability if capability != "browser_session" else "fetch_html", url=url)
+        args = primary.get("args") or {}
+        url = args.get("url") or args.get("dataset_id")
+        fixture_name = args.get("fixture") or contract["contract_id"]
+        if self.mode == "live" and capability == "scrape_dataset":
+            payload = await asyncio.to_thread(scrape_dataset, args)
+        elif self.mode == "live" and self.pool is not None:
+            payload = await self.pool.invoke(
+                capability if capability != "browser_session" else "fetch_html",
+                url=url,
+            )
+        else:
+            payload = self._load_fixture(fixture_name, capability)
         if payload is None:
             raise AcquisitionError(
                 f"no payload for {contract['contract_id']} at rung {current}",

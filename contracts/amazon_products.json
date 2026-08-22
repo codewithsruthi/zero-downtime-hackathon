@@ -1,0 +1,75 @@
+{
+  "contract_id": "amazon_products",
+  "contract_version": 1,
+  "owner_team": "data-platform",
+  "description": "Amazon product pages via Bright Data Web Scraper API",
+  "acquisition": {
+    "kind": "structured_feed",
+    "primary": {
+      "capability": "scrape_dataset",
+      "args": {
+        "dataset_id": "gd_l7q7dkf244hwjntr0",
+        "collection_id": "hl_bbd9eb9a",
+        "fixture": "amazon_products",
+        "urls": [
+          "https://www.amazon.com/dp/B0CHHSFMRL",
+          "https://www.amazon.com/dp/B09V3KXJPB",
+          "https://www.amazon.com/dp/B0BDJ279KF",
+          "https://www.amazon.com/dp/B0BSHF7WHW",
+          "https://www.amazon.com/dp/B0D1XD1ZV3",
+          "https://www.amazon.com/dp/B09G9FPHY6",
+          "https://www.amazon.com/dp/B0BSHF7T3T",
+          "https://www.amazon.com/dp/B0C1H26C46",
+          "https://www.amazon.com/dp/B0CQT1Y6XC",
+          "https://www.amazon.com/dp/B0C26B8PQ7"
+        ]
+      }
+    },
+    "escalation_ladder": [
+      { "capability": "scrape_dataset" },
+      { "capability": "fetch_markdown" },
+      { "capability": "fetch_html" }
+    ],
+    "freshness_slo_seconds": 86400
+  },
+  "extraction": {
+    "strategy": "json_records",
+    "field_aliases": {
+      "asin": ["asin", "product_id", "sku"],
+      "title": ["title", "name", "product_title"],
+      "price": ["price", "final_price", "current_price"],
+      "currency": ["currency", "currency_code"],
+      "rating": ["rating", "stars", "average_rating"],
+      "url": ["url", "product_url", "input_url"]
+    },
+    "coerce": true
+  },
+  "schema": {
+    "type": "object",
+    "required": ["asin", "title"],
+    "properties": {
+      "asin": { "type": "string", "minLength": 8 },
+      "title": { "type": "string", "minLength": 3 },
+      "price": { "type": ["number", "null"], "minimum": 0 },
+      "currency": { "type": ["string", "null"] },
+      "rating": { "type": ["number", "null"], "minimum": 0, "maximum": 5 },
+      "brand": { "type": ["string", "null"] },
+      "availability": { "type": ["string", "null"] },
+      "url": { "type": ["string", "null"] }
+    },
+    "additionalProperties": true,
+    "evolution_policy": "additive_only"
+  },
+  "assertions": [
+    { "id": "row_count_floor", "sql": "SELECT COUNT(*) >= 5 FROM {{table}}", "severity": "critical" },
+    { "id": "asin_not_null", "sql": "SELECT SUM(CASE WHEN asin IS NULL THEN 1 ELSE 0 END) = 0 FROM {{table}}", "severity": "critical" },
+    { "id": "title_not_null", "sql": "SELECT SUM(CASE WHEN title IS NULL THEN 1 ELSE 0 END) = 0 FROM {{table}}", "severity": "critical" },
+    { "id": "in_stock_price", "sql": "SELECT AVG(CASE WHEN availability IS NOT NULL AND lower(cast(availability as varchar)) LIKE '%unavailable%' THEN 0.0 WHEN price IS NULL THEN 1.0 ELSE 0.0 END) < 0.25 FROM {{table}}", "severity": "high" },
+    { "id": "no_dupes", "sql": "SELECT COUNT(*) = COUNT(DISTINCT asin) FROM {{table}}", "severity": "high" }
+  ],
+  "healing": {
+    "max_autonomy_tier": 2,
+    "heal_budget_per_hour": 5,
+    "allowed_primitives": ["P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8"]
+  }
+}
