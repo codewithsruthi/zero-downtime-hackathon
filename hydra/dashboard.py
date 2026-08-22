@@ -235,13 +235,15 @@ PAGE = """<!doctype html>
       min-height: 4.2rem;
     }
     .step:last-child { border-right: 0; }
-    .step .idx { display: block; color: var(--muted); font-size: 0.66rem; letter-spacing: 0.1em; }
+    .step .idx { display: block; color: var(--muted); font-size: 0.72rem; letter-spacing: 0.1em; font-weight: 700; }
     .step .l { font-family: var(--font-serif); font-size: 1.05rem; margin-top: 0.2rem; }
     .step .n { font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-top: 0.15rem; }
-    .step.done .l { color: var(--ok); }
-    .step.current { background: var(--step-current); }
-    .step.current .l { color: var(--accent); }
-    .step.failed .l { color: var(--bad); }
+    .step.done { background: var(--ribbon-healed); }
+    .step.done .idx, .step.done .l, .step.done .n { color: var(--ok); }
+    .step.current { background: var(--ribbon-armed); }
+    .step.current .idx, .step.current .l, .step.current .n { color: var(--warn); }
+    .step.failed { background: var(--ribbon-broken); }
+    .step.failed .idx, .step.failed .l, .step.failed .n { color: var(--bad); }
     main { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(20rem, 0.9fr); min-height: 58vh; }
     section.catalog { padding: 1.2rem 1.75rem 2rem; }
     section.scores {
@@ -401,6 +403,7 @@ PAGE = """<!doctype html>
     const FAULTS = CONFIG.faults || [];
     const STEP_LABELS = {detect:"Detect", classify:"Classify", guard:"Guard", act:"Act", verify:"Verify"};
     let lastHealth = "";
+    let playing = false;
     function el(id){ return document.getElementById(id); }
     function esc(s){
       return String(s == null ? "" : s)
@@ -543,7 +546,17 @@ PAGE = """<!doctype html>
       el("links").innerHTML = links.join(" · ") || "Port / SigNoz optional";
       el("updated").textContent = "updated " + (d.updated_at || "") + " · poll 2s";
     }
+    async function playFrames(frames){
+      playing = true;
+      for (const frame of frames) {
+        if (!playing) break;
+        render(frame);
+        await new Promise(resolve => setTimeout(resolve, 1600));
+      }
+      playing = false;
+    }
     async function tick(){
+      if (playing) return;
       try {
         const res = await fetch("/api/live", {cache:"no-store"});
         render(await res.json());
@@ -570,11 +583,15 @@ PAGE = """<!doctype html>
         const spec = FAULTS.find(f => f.id === fault) || {};
         const body = Object.assign({fault, once: true}, spec.cfg || {});
         el("breakBtn").disabled = true;
-        el("action").textContent = "Fault injected. Heal usually finishes in 3–6 seconds.";
+        el("action").textContent = "Fault injected. Watch 01–05 and the catalog cards.";
         try {
-          await post("/api/break", body);
-          el("action").textContent = "Watch the ribbon and the catalog cards."
+          const data = await post("/api/break", body);
+          if (data.live) render(data.live);
+          if (data.frames && data.frames.length) await playFrames(data.frames);
+          else if (data.live) render(data.live);
+          el("action").textContent = "Watch the ribbon and the catalog cards.";
         } catch (err) {
+          playing = false;
           el("action").textContent = "Break failed: " + err;
         } finally {
           setTimeout(() => { el("breakBtn").disabled = false; }, 2500);
@@ -687,6 +704,72 @@ def load_live(ctx: DashboardContext) -> dict[str, Any]:
     return empty_snapshot(ctx.source)
 
 
+STEP_ORDER = ("detect", "classify", "guard", "act", "verify")
+
+
+def overlay_steps(
+    snap: dict[str, Any],
+    *,
+    current: str | None = None,
+    all_done: bool = False,
+    all_failed: bool = False,
+) -> dict[str, Any]:
+    """Copy a live snapshot and paint the 01–05 heal strip for judges."""
+    painted = json.loads(json.dumps(snap, default=str))
+    if all_done:
+        painted["steps"] = {name: "done" for name in STEP_ORDER}
+        painted["phase"] = "idle"
+        return painted
+    if all_failed:
+        painted["steps"] = {name: "failed" for name in STEP_ORDER}
+        painted["phase"] = "detect"
+        return painted
+    steps = {}
+    reached = STEP_ORDER.index(current) if current in STEP_ORDER else -1
+    for idx, name in enumerate(STEP_ORDER):
+        if idx < reached:
+            steps[name] = "done"
+        elif idx == reached:
+            steps[name] = "current"
+        else:
+            steps[name] = "failed"
+    painted["steps"] = steps
+    painted["phase"] = current or "detect"
+    return painted
+
+
+def run_break_demo(ctx: DashboardContext, source: str, fault: str, cfg: dict[str, Any]) -> dict[str, Any]:
+    """Inject, ingest the broken scrape, then heal — return frames the UI can play."""
+    _inject_fault(ctx, source, fault, cfg)
+    if ctx.app is not None:
+        asyncio.run(ctx.app.ingest(source))
+    broken = load_live(ctx)
+    frames = [
+        overlay_steps(broken, all_failed=True),
+        overlay_steps(broken, current="detect"),
+        overlay_steps(broken, current="classify"),
+        overlay_steps(broken, current="guard"),
+        overlay_steps(broken, current="act"),
+        overlay_steps(broken, current="verify"),
+    ]
+    resolutions: list[str] = []
+    if ctx.app is not None:
+        try:
+            resolutions = list(_run_heal(ctx, source))
+        except RuntimeError:
+            resolutions = []
+    healed = load_live(ctx)
+    frames.append(overlay_steps(healed, all_done=True))
+    return {
+        "ok": True,
+        "injected": fault,
+        "source": source,
+        "live": frames[0],
+        "frames": frames,
+        "resolutions": resolutions,
+    }
+
+
 def _check_token(handler: BaseHTTPRequestHandler, ctx: DashboardContext) -> bool:
     if not ctx.token:
         return False
@@ -766,13 +849,13 @@ def make_handler(ctx: DashboardContext):
                 cfg.update({k: v for k, v in body.items() if k not in {"source", "fault"}})
                 cfg.setdefault("once", True)
                 try:
-                    _inject_fault(ctx, source, fault, cfg)
+                    payload = run_break_demo(ctx, source, fault, cfg)
                 except KeyError as exc:
                     self._json(400, {"ok": False, "error": str(exc)})
                     return
                 if ctx.kick is not None:
                     ctx.kick.set()
-                self._json(200, {"ok": True, "injected": fault, "source": source, "live": load_live(ctx)})
+                self._json(200, payload)
                 return
             if path == "/api/reset":
                 _reset_circuit(ctx, source)

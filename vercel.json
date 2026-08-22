@@ -1,0 +1,23 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "github": {
+    "silent": false,
+    "autoJobCancelation": true
+  },
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 60,
+      "memory": 1024,
+      "includeFiles": "{hydra/**,fixtures/**,contracts/**,capabilities.yaml,playbooks.yaml}"
+    }
+  },
+  "rewrites": [
+    { "source": "/", "destination": "/api?route=/" },
+    { "source": "/index.html", "destination": "/api?route=/" },
+    { "source": "/api/live", "destination": "/api?route=/api/live" },
+    { "source": "/api/break", "destination": "/api?route=/api/break" },
+    { "source": "/api/heal", "destination": "/api?route=/api/heal" },
+    { "source": "/api/reset", "destination": "/api?route=/api/reset" }
+  ]
+}
