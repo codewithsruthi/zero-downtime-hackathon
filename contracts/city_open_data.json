@@ -1,0 +1,43 @@
+{
+  "contract_id": "city_open_data",
+  "contract_version": 1,
+  "owner_team": "data-platform",
+  "description": "City population CSV from an open data portal",
+  "acquisition": {
+    "kind": "csv_file",
+    "primary": {
+      "capability": "fetch_markdown",
+      "args": { "url": "https://example.test/cities.csv", "fixture": "city_open_data" }
+    },
+    "escalation_ladder": [
+      { "capability": "fetch_markdown" },
+      { "capability": "fetch_html" }
+    ],
+    "freshness_slo_seconds": 86400
+  },
+  "extraction": {
+    "strategy": "csv_table"
+  },
+  "schema": {
+    "type": "object",
+    "required": ["city"],
+    "properties": {
+      "city": { "type": "string", "minLength": 2 },
+      "population": { "type": ["integer", "null"], "minimum": 0 },
+      "year": { "type": ["integer", "null"] }
+    },
+    "additionalProperties": true,
+    "evolution_policy": "additive_only"
+  },
+  "assertions": [
+    { "id": "row_count_floor", "sql": "SELECT COUNT(*) >= 10 FROM {{table}}", "severity": "critical" },
+    { "id": "city_not_null", "sql": "SELECT SUM(CASE WHEN city IS NULL THEN 1 ELSE 0 END) = 0 FROM {{table}}", "severity": "critical" },
+    { "id": "population_null_rate", "sql": "SELECT AVG(CASE WHEN population IS NULL THEN 1.0 ELSE 0.0 END) < 0.10 FROM {{table}}", "severity": "high" },
+    { "id": "no_dupes", "sql": "SELECT COUNT(*) = COUNT(DISTINCT city) FROM {{table}}", "severity": "high" }
+  ],
+  "healing": {
+    "max_autonomy_tier": 2,
+    "heal_budget_per_hour": 5,
+    "allowed_primitives": ["P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8"]
+  }
+}

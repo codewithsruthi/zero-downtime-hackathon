@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["contract_id", "contract_version", "acquisition", "extraction", "schema", "assertions", "healing"],
+  "properties": {
+    "contract_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,62}$" },
+    "contract_version": { "type": "integer", "minimum": 1 },
+    "owner_team": { "type": "string" },
+    "description": { "type": "string" },
+    "acquisition": {
+      "type": "object",
+      "required": ["kind", "primary", "escalation_ladder", "freshness_slo_seconds"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["web_page", "json_api", "csv_file", "structured_feed"] },
+        "primary": { "type": "object" },
+        "escalation_ladder": { "type": "array", "minItems": 1 },
+        "freshness_slo_seconds": { "type": "number", "minimum": 1 }
+      }
+    },
+    "extraction": { "type": "object", "required": ["strategy"] },
+    "schema": { "type": "object" },
+    "assertions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "sql", "severity"]
+      }
+    },
+    "healing": {
+      "type": "object",
+      "required": ["max_autonomy_tier", "heal_budget_per_hour"],
+      "properties": {
+        "max_autonomy_tier": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "heal_budget_per_hour": { "type": "integer", "minimum": 1 },
+        "allowed_primitives": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+[
+  {"symbol": "BTC", "price": 64120.5},
+  {"symbol": "ETH", "price": 3120.1},
+  {"symbol": "SOL", "price": 148.2},
+  {"symbol": "XRP", "price": 0.62},
+  {"symbol": "ADA", "price": 0.41},
+  {"symbol": "DOGE", "price": 0.12},
+  {"symbol": "DOT", "price": 6.4},
+  {"symbol": "AVAX", "price": 28.9},
+  {"symbol": "LINK", "price": 14.1},
+  {"symbol": "ATOM", "price": 8.7}
+]

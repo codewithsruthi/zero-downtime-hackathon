@@ -66,3 +66,18 @@ Global flags: `--json` `--verbose` `--dry-run` `--collector-id` `--url`.
 - [x] Every TEST-* in Section 11 exists under `tests/`
 
 See SPEC.md and plan.md for the full contract.
+
+## HYDRA
+
+Source-agnostic healing lives in `hydra/`. Contracts are JSON. Failures map to six classes. The existing factory and `data/latest.json` are untouched.
+
+```
+pip install -r requirements-hydra.txt
+make hydra-probe
+make hydra-test
+python3 -m hydra scrape
+python3 -m hydra break --source gh_trending_repos --fault http_403
+python3 -m hydra heal --source gh_trending_repos
+```
+
+Design: `HYDRA.md`. Default `HYDRA_MODE=replay`.

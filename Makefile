@@ -1,4 +1,4 @@
-.PHONY: setup test probe scrape heal approve demo demo-offline reset app doctor port-sync
+.PHONY: setup test probe scrape heal approve demo demo-offline reset app doctor port-sync hydra-probe hydra-test hydra-demo
 
 setup:
 	./scripts/setup.sh
@@ -35,3 +35,14 @@ doctor:
 
 port-sync:
 	./bin/factory port-sync
+
+HYDRA_PY ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,/usr/bin/python3)
+
+hydra-probe:
+	$(HYDRA_PY) scripts/hydra_probe.py
+
+hydra-test:
+	$(HYDRA_PY) -m pytest tests/hydra -q
+
+hydra-demo:
+	HYDRA_MODE=replay $(HYDRA_PY) -m hydra demo

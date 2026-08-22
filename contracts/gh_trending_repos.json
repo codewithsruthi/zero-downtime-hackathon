@@ -1,0 +1,49 @@
+{
+  "contract_id": "gh_trending_repos",
+  "contract_version": 1,
+  "owner_team": "data-platform",
+  "description": "Trending open source repositories, daily",
+  "acquisition": {
+    "kind": "web_page",
+    "primary": {
+      "capability": "fetch_markdown",
+      "args": { "url": "https://github.com/trending", "fixture": "gh_trending_repos" }
+    },
+    "escalation_ladder": [
+      { "capability": "fetch_markdown" },
+      { "capability": "fetch_html" },
+      { "capability": "ai_extract" },
+      { "capability": "browser_session" }
+    ],
+    "freshness_slo_seconds": 86400
+  },
+  "extraction": {
+    "strategy": "regex_table",
+    "hints": ["repository name", "primary language", "star count today"],
+    "pattern": "class=\"repo-item\" data-repo=\"(?P<repo>[^\"]+)\" data-lang=\"(?P<lang>[^\"]+)\" data-stars=\"(?P<stars>\\d+)\"",
+    "field_aliases": { "stars_today": ["stars_today", "stars"] }
+  },
+  "schema": {
+    "type": "object",
+    "required": ["repo", "stars_today"],
+    "properties": {
+      "repo": { "type": "string", "minLength": 3 },
+      "lang": { "type": ["string", "null"] },
+      "stars_today": { "type": "integer", "minimum": 0 }
+    },
+    "additionalProperties": true,
+    "evolution_policy": "additive_only"
+  },
+  "assertions": [
+    { "id": "row_count_floor", "sql": "SELECT COUNT(*) >= 10 FROM {{table}}", "severity": "critical" },
+    { "id": "repo_not_null", "sql": "SELECT SUM(CASE WHEN repo IS NULL THEN 1 ELSE 0 END) = 0 FROM {{table}}", "severity": "critical" },
+    { "id": "stars_null_rate", "sql": "SELECT AVG(CASE WHEN stars_today IS NULL THEN 1.0 ELSE 0.0 END) < 0.10 FROM {{table}}", "severity": "high" },
+    { "id": "no_dupes", "sql": "SELECT COUNT(*) = COUNT(DISTINCT repo) FROM {{table}}", "severity": "high" },
+    { "id": "volume_stability", "sql": "SELECT {{prev_count}} = 0 OR ABS(COUNT(*) - {{prev_count}}) <= GREATEST(0.4 * {{prev_count}}, 5) FROM {{table}}", "severity": "medium" }
+  ],
+  "healing": {
+    "max_autonomy_tier": 2,
+    "heal_budget_per_hour": 5,
+    "allowed_primitives": ["P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8"]
+  }
+}

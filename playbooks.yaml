@@ -1,0 +1,36 @@
+playbooks:
+  F1_acquisition:
+    - { primitive: P6, args: { max_attempts: 2, base_delay_s: 5 } }
+    - { primitive: P1, args: { advance_rungs: 1 } }
+    - { primitive: P1, args: { advance_rungs: 2 } }
+    - { primitive: P7, args: {} }
+    - { primitive: P8, args: {} }
+
+  F2_structural_drift:
+    - { primitive: P5, args: { reason: "rule out transient parse bug" } }
+    - { primitive: P1, args: { advance_rungs: 1 } }
+    - { primitive: P2, args: { validate_against_snapshots: 3 } }
+    - { primitive: P7, args: {} }
+    - { primitive: P8, args: {} }
+
+  F3_contract_violation:
+    - { primitive: P4, args: { mode: "partial_commit" } }
+    - { primitive: P3, args: { policy: "additive_only" } }
+    - { primitive: P2, args: { validate_against_snapshots: 3 } }
+    - { primitive: P8, args: {} }
+
+  F4_statistical_anomaly:
+    - { primitive: P5, args: {} }
+    - { primitive: P1, args: { advance_rungs: 1 } }
+    - { primitive: P2, args: { validate_against_snapshots: 5 } }
+    - { primitive: P8, args: {} }
+
+  F5_freshness:
+    - { primitive: P6, args: { max_attempts: 3 } }
+    - { primitive: P1, args: { advance_rungs: 1 } }
+    - { primitive: P8, args: {} }
+
+  F6_poison_pill:
+    - { primitive: P4, args: { mode: "dead_letter" } }
+    - { primitive: P5, args: {} }
+    - { primitive: P8, args: {} }

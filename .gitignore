@@ -33,6 +33,8 @@ tmp/
 __pycache__/
 .pytest_cache/
 .mypy_cache/
+hydra.duckdb
+hydra.duckdb.wal
 
 # OS
 Thumbs.db
