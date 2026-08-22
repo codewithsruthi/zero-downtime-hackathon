@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HYDRA — Full architecture and operator brief</title>
+<style>
+  body { font: 16px/1.5 Calibri, "Segoe UI", system-ui, sans-serif; color: #1a1a1a;
+         max-width: 760px; margin: 32px auto; padding: 0 20px 72px; }
+  h1 { font-size: 34px; color: #1f3a5f; margin: 0 0 4px; }
+  h2 { font-size: 20px; color: #1f3a5f; margin: 32px 0 10px; }
+  h3 { font-size: 16px; color: #1f3a5f; margin: 22px 0 8px; }
+  p { margin: 0 0 12px; }
+  .lede { font-weight: 600; font-size: 17px; }
+  .muted { color: #4a4a4a; }
+  a { color: #1155cc; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0 18px; font-size: 14px; }
+  th { background: #1f3a5f; color: #fff; text-align: left; padding: 7px 8px; }
+  td { border: 1px solid #d0d5dd; padding: 7px 8px; vertical-align: top; }
+  tr:nth-child(even) td { background: #f4f6f8; }
+  figure { margin: 16px 0 20px; }
+  figure img { width: 100%; height: auto; }
+  figcaption { font-size: 13px; color: #4a4a4a; font-style: italic; margin-top: 6px; }
+  ul { margin: 0 0 12px; padding-left: 20px; }
+  .note { background: #f4f6f8; border: 1px solid #d0d5dd; padding: 12px 14px; margin: 16px 0 24px; }
+  @media print { body { margin: 16px; } }
+</style>
+</head>
+<body>
+<h1>HYDRA</h1>
+<p class="muted">Full architecture, self-healing design, and operator brief</p>
+<p class="muted">Sruthi Anuvalasetty · Ramachandra Nalam · 22 August 2026<br>
+Public dashboard: <a href="http://2.29.4.204:8080">http://2.29.4.204:8080</a><br>
+<a href="https://www.linkedin.com/in/sruthi-anuvalasetty/">Sruthi Anuvalasetty</a> ·
+<a href="https://www.linkedin.com/in/ramachandra-nalam/">Ramachandra Nalam</a></p>
+
+<div class="note">
+  <p><strong>To make this a Google Doc.</strong> Download
+  <a href="HYDRA-complete-brief.docx">HYDRA-complete-brief.docx</a> (this file includes the four architecture diagrams).
+  In Google Drive: New → File upload → open the file → Open with Google Docs → File → Save as Google Docs.</p>
+</div>
+
+<p class="lede">One sentence. HYDRA keeps an Amazon product catalog on screen. When a scrape fails, shoppers still see the last good catalog while the agent finds the failure class, tries a bounded repair, and only publishes again after the same quality check that failed now passes.</p>
+
+<h2>Contents</h2>
+<ul>
+  <li>1. How to explain this to anyone</li>
+  <li>2. What I built</li>
+  <li>3. LinkedIn and submission copy</li>
+  <li>4. What the system does</li>
+  <li>5. High-level design</li>
+  <li>6. How self-healing works</li>
+  <li>7. Last-good catalog</li>
+  <li>8. Failure classes, primitives, and Amazon faults</li>
+  <li>9. Low-level design</li>
+  <li>10. Four-minute judge script</li>
+  <li>11. Scoreboard and talking points</li>
+  <li>12. Commands, invariants, and repository map</li>
+</ul>
+
+<h2>1. How to explain this to anyone</h2>
+<p>Imagine a store window that must never go empty. A clerk goes to Amazon, copies the shelf, and only then updates the window. If Amazon slams the door, shows an “are you human?” page, or sends a half-empty box, the window still shows yesterday’s products. Customers never see a blank page.</p>
+<p>Then a supervisor asks a simple question: was the door locked, was the box empty, or was one item rotten? It tries a bounded fix. Wait and try again. Use a stronger fetch. Rebuild from the last good box. Set aside the rotten item. It does not invent a softer test so it can declare victory. It re-runs the same checklist: enough products, every item has an ID and a title, prices are not mostly missing.</p>
+<p>If the problem would change the shape of the catalog — a column renamed — it stops and asks a human. If the same problem happens three times in an hour, it stops on purpose so it cannot burn money all night.</p>
+<p><strong>That is what “self-healing” means here. Detect the break. Classify it. Stay safe. Act. Prove the original check now passes.</strong></p>
+
+<h2>2. What I built</h2>
+<p>This is a team hackathon. The generic agent — six failure classes, eight repair primitives, a DuckDB ledger — is HYDRA. My product work is what judges actually see.</p>
+<p>I turned a source-agnostic healer into one story: Amazon catalog reliability. When someone asks what I built, the honest sentence is this. I made the catalog stay up, and I made the heal loop visible.</p>
+<table>
+  <tr><th>What I shipped</th><th>Why it matters</th></tr>
+  <tr><td>Amazon-only README and architecture diagrams</td><td>Judges see one story: the catalog stays up when the scrape breaks.</td></tr>
+  <tr><td>amazon_products contract and replay fixture</td><td>Bright Data dataset gd_l7q7dkf244hwjntr0. Required fields: asin, title. Quality floor: at least 5 products.</td></tr>
+  <tr><td>Public dashboard on port 8080; isolated live UI on 8081</td><td>Break Amazon, then watch Detect → Classify → Guard → Act → Verify. Live cannot overwrite the judge page.</td></tr>
+  <tr><td>Last-good serving snapshot (data/hydra-live.json)</td><td>Raw Bright Data never writes the document the public page serves.</td></tr>
+  <tr><td>Port catalog import and control-plane entities</td><td>Writes hit a local ledger first. A Port login failure does not fail the pipeline.</td></tr>
+  <tr><td>Original factory invariants</td><td>Heal is triggered, not silent. Default mode is replay. Never promote a bad document.</td></tr>
+</table>
+<p><em>The agent is the engine. The Amazon page is the proof. I own the proof.</em></p>
+
+<h2>3. LinkedIn and submission copy</h2>
+<h3>LinkedIn (about 130 words)</h3>
+<p>Built HYDRA, a self-healing data agent for Amazon catalog reliability, for a zero-downtime hackathon with Ramachandra Nalam.</p>
+<p>External data breaks quietly. HTTP 200 with empty or wrong products is how bad catalogs ship. HYDRA never puts a raw scrape on the page. It classifies the failure, applies one of eight reversible repairs, and only publishes after the same quality check passes. Schema changes wait for a human. Repeated identical failures open a circuit so the agent cannot burn budget overnight.</p>
+<p>I productized the agent onto a public Amazon dashboard: last-good catalog, a Break control that injects eight real faults, and a visible Detect → Verify loop. Default mode is replay, so the demo does not depend on venue wifi.</p>
+<p>Live: <a href="http://2.29.4.204:8080">http://2.29.4.204:8080</a></p>
+
+<h3>Submission form (short)</h3>
+<p>HYDRA is a self-healing Amazon catalog agent. When the scrape breaks, the last-good catalog stays up. The agent detects the failure, classifies it (F1–F6), guards the repair, acts with one of eight primitives (P1–P8), and verifies using the same assertion that failed. No Port login. No SigNoz login. Open the dashboard, choose a fault, click Break Amazon, watch Detect → Classify → Guard → Act → Verify.</p>
+<p>Dashboard: http://2.29.4.204:8080<br>Authors: Sruthi Anuvalasetty · Ramachandra Nalam</p>
+
+<h2>4. What the system does</h2>
+<p>HYDRA is pointed at one source for the demo: Amazon products. The catalog on the dashboard is real Amazon-shaped rows — ASIN, title, price, availability. Replay means we are not calling Bright Data on every tick, so the demo does not depend on venue wifi.</p>
+<table>
+  <tr><th>Piece</th><th>Value</th></tr>
+  <tr><td>Source</td><td>amazon_products</td></tr>
+  <tr><td>Contract</td><td>contracts/amazon_products.json</td></tr>
+  <tr><td>Replay fixture</td><td>fixtures/amazon_products.json</td></tr>
+  <tr><td>Bright Data dataset</td><td>gd_l7q7dkf244hwjntr0</td></tr>
+  <tr><td>Collection</td><td>hl_bbd9eb9a</td></tr>
+  <tr><td>Serving snapshot</td><td>data/hydra-live.json</td></tr>
+  <tr><td>Required fields</td><td>asin, title</td></tr>
+  <tr><td>Quality floor</td><td>at least 5 products</td></tr>
+  <tr><td>Default mode</td><td>HYDRA_MODE=replay</td></tr>
+</table>
+<table>
+  <tr><th>Operator action</th><th>What happens</th></tr>
+  <tr><td>scrape</td><td>Acquire → parse → validate → load. Promote only if assertions pass.</td></tr>
+  <tr><td>break --fault …</td><td>Arm one of eight runtime faults. No code edit.</td></tr>
+  <tr><td>heal</td><td>One detect-and-repair sweep.</td></tr>
+  <tr><td>Dashboard Break Amazon</td><td>Same as break plus the watch loop: scrape, hold last-good, then heal.</td></tr>
+  <tr><td>approve</td><td>Unlock a Tier 2 repair (schema change or failover).</td></tr>
+  <tr><td>reset-circuit</td><td>Close an open circuit after the agent gave up.</td></tr>
+  <tr><td>status</td><td>Source health plus MTTD, MTTA, MTTR, heal success.</td></tr>
+</table>
+<p>Replay uses the fixture. You do not need a Bright Data key for the demo. Live calls the dataset API and is isolated on port 8081 so it cannot overwrite the judge page.</p>
+
+<h2>5. High-level design</h2>
+<p>Three planes. One invariant. The data plane acquires and quality-gates rows. The control plane classifies and repairs. The memory plane records what happened and can refuse a dangerous repair. The invariant: a raw scrape never becomes the serving document.</p>
+<h3>Data plane</h3>
+<p>Bright Data or the fixture → Acquire → Parse → Validate → Load DuckDB → hydra-live.json → dashboard. Validation is SQL assertions on the contract, not “HTTP 200 means success.” Quiet failures — too few rows, null prices — are first-class.</p>
+<h3>Control plane</h3>
+<p>Detect → Classify (F1–F6) → Propose a playbook → Guard → Act (P1–P8) → Verify → Learn. Sources are contracts (JSON). Failures are classes. Repairs are primitives. Adding a source is a JSON file, not a new handler. No Amazon-specific if-statements in the healer.</p>
+<h3>Memory and governance</h3>
+<p>DuckDB (hydra.duckdb) is the system of record: raw snapshots, runs, incidents, heal ledger. Port mirrors incidents and heals, best effort. Local ledger first. SigNoz is optional sight. OpenTelemetry export failures are swallowed after a three-second timeout.</p>
+<figure>
+  <img src="architecture/hydra-architecture-system.png" alt="HYDRA system architecture">
+  <figcaption>Figure 1. System architecture. Acquire, parse, validate, then promote. Raw scrape never writes the serving catalog.</figcaption>
+</figure>
+
+<h2>6. How self-healing works</h2>
+<p>Heal is triggered, not silent. The dashboard watch loop scrapes, then heals only if that run failed. There is no silent auto-heal on a healthy feed. A repair is only a heal if the same assertion that failed, passes afterward.</p>
+<figure>
+  <img src="architecture/hydra-architecture-heal-loop.png" alt="Detect, classify, guard, act, verify">
+  <figcaption>Figure 2. Closed-loop heal. Detect → Classify → Guard → Act → Verify. The same check that failed must pass.</figcaption>
+</figure>
+
+<h3>Detect</h3>
+<p>Code: hydra/agent/detector.py. Three evidence sources, then one incident per source.</p>
+<ul>
+  <li>Failed pipeline runs — 403, captcha, parse or load errors.</li>
+  <li>Failed SQL assertions — row_count_floor, asin_not_null, and the rest of the contract.</li>
+  <li>Freshness — no successful run inside the SLO (24 hours on Amazon).</li>
+</ul>
+
+<h3>Classify</h3>
+<p>Code: hydra/agent/classifier.py. First match wins. Inputs are telemetry, not “this is Amazon.”</p>
+<table>
+  <tr><th>If this is true</th><th>Class</th></tr>
+  <tr><td>No success inside the freshness SLO</td><td>F5 Freshness</td></tr>
+  <tr><td>Acquire error, HTTP ≥ 400, timeout, captcha, or empty body</td><td>F1 Acquisition</td></tr>
+  <tr><td>Zero rows, or fewer than half of last-good volume</td><td>F2 Structural drift</td></tr>
+  <tr><td>Schema errors</td><td>F3 Contract violation</td></tr>
+  <tr><td>Load error, poison, or conversion error</td><td>F6 Poison pill</td></tr>
+  <tr><td>Everything else — null flood, distribution</td><td>F4 Statistical anomaly</td></tr>
+</table>
+<p>A fingerprint is a hash of class + source + stage + error + failed assertions. The same fingerprint three times in an hour is treated as structural, not transient.</p>
+
+<h3>Propose</h3>
+<p>Code: hydra/agent/proposer.py and playbooks.yaml. Each class has an ordered list of primitives. If this fingerprint healed before, that primitive is tried first. Every playbook ends in P8 — give up and open the circuit.</p>
+<p>Loud 403 (F1): P6 backoff → P1 climb the ladder → P1 again → P7 failover → P8 stop.</p>
+<p>Volume collapse (F2 / F4): P5 replay last-good raw → P1 stronger fetch → P2 resynthesize extractor → P8.</p>
+
+<h3>Guard</h3>
+<p>Code: hydra/agent/guard.py. This is the difference between a retry script and a system you can leave running.</p>
+<table>
+  <tr><th>Rule</th><th>Default</th></tr>
+  <tr><td>Circuit is open</td><td>Refuse until reset-circuit</td></tr>
+  <tr><td>Heal budget per source per hour</td><td>5, then refuse</td></tr>
+  <tr><td>Same fingerprint in one hour</td><td>3 times → force P8</td></tr>
+  <tr><td>Attempts on this incident</td><td>4, then force P8</td></tr>
+  <tr><td>Primitive tier 2 or above</td><td>Ask a human before changing schema or failing over</td></tr>
+  <tr><td>Verification</td><td>Required. No verify, no success.</td></tr>
+</table>
+
+<h3>Act</h3>
+<table>
+  <tr><th>ID</th><th>What it does</th><th>Tier</th><th>Reversible</th></tr>
+  <tr><td>P6</td><td>Wait, then retry</td><td>0</td><td>Yes</td></tr>
+  <tr><td>P1</td><td>Advance one rung on the acquisition ladder (dataset → markdown → HTML)</td><td>1</td><td>Yes</td></tr>
+  <tr><td>P5</td><td>Rebuild derived tables from the last-good raw snapshot. No re-fetch.</td><td>0</td><td>Yes</td></tr>
+  <tr><td>P2</td><td>Infer a new extractor. Must reproduce known-good historical snapshots.</td><td>1</td><td>Yes</td></tr>
+  <tr><td>P4</td><td>Drop bad rows to a dead-letter table. Commit the rest.</td><td>1</td><td>Yes</td></tr>
+  <tr><td>P3</td><td>Additive schema or field aliases</td><td>2 — ask first</td><td>Gated</td></tr>
+  <tr><td>P7</td><td>Search for an alternate URL</td><td>2 — ask first</td><td>Gated</td></tr>
+  <tr><td>P8</td><td>Open the circuit and escalate to a human</td><td>3</td><td>Stop</td></tr>
+</table>
+<p><em>P2 does not grade its own homework. A candidate extractor must replay historical snapshots that already have expected_rows. If it cannot reproduce them, it is discarded.</em></p>
+
+<h3>Verify and learn</h3>
+<p>Code: hydra/agent/verifier.py. Re-run the same failing assertion IDs. No softer substitute check. If verify fails and the primitive was reversible, the contract patch is rolled back and the next primitive runs.</p>
+<p><strong>Heal success on the scoreboard is incidents healed divided by incidents finished. Backoff then a verified P1 is one healed incident, not two.</strong></p>
+<p>On verified success, DuckDB — and Port if configured — stores fingerprint → primitive. The next identical failure skips the wasted first steps.</p>
+
+<h2>7. Last-good catalog</h2>
+<p>Serving is split on purpose. The public page never reads Bright Data output. It reads data/hydra-live.json, which keeps products_good when products_now is bad.</p>
+<ol>
+  <li>Acquire writes raw to DuckDB raw_snapshot — content-hashed, append-only.</li>
+  <li>Parse and schema split good rows from bad rows.</li>
+  <li>Assertions run on the derived table (derived_amazon_products).</li>
+  <li>If the run is ok, products_good is updated. If not, the snapshot keeps the previous good list.</li>
+  <li>The dashboard reads hydra-live.json atomically — write a temp file, then replace.</li>
+</ol>
+<p>So a 403 looks like this. The ribbon says BROKE. Cards are dimmed but still there. The loop walks Detect → Verify. The pill returns to Healthy.</p>
+<figure>
+  <img src="architecture/hydra-architecture-last-good.png" alt="Last-good catalog path">
+  <figcaption>Figure 3. Last-good path. Fixture or Bright Data never overwrites the serving document.</figcaption>
+</figure>
+
+<h2>8. Failure classes, primitives, and Amazon faults</h2>
+<table>
+  <tr><th>Class</th><th>Name</th><th>Signature</th><th>Typical repair</th></tr>
+  <tr><td>F1</td><td>Acquisition</td><td>403, timeout, captcha, empty body</td><td>P6 then P1</td></tr>
+  <tr><td>F2</td><td>Structural drift</td><td>Fetch OK, zero or half the rows</td><td>P5 then P1 or P2</td></tr>
+  <tr><td>F3</td><td>Contract violation</td><td>Rows exist, schema fails</td><td>P4 then P3 (Tier 2)</td></tr>
+  <tr><td>F4</td><td>Statistical anomaly</td><td>Schema OK, distribution wrong</td><td>P5 then P1</td></tr>
+  <tr><td>F5</td><td>Freshness</td><td>No success inside the SLO</td><td>P6 then P1</td></tr>
+  <tr><td>F6</td><td>Poison pill</td><td>One row kills the batch</td><td>P4 quarantine</td></tr>
+</table>
+<p>Every fault is a runtime flag. ChaosInjector.apply() mutates the payload — or raises 403 — after the fixture or live fetch.</p>
+<table>
+  <tr><th>Fault</th><th>What judges see</th><th>Class</th></tr>
+  <tr><td>Loud · HTTP 403</td><td>Scrape blocked. Cards stay last-good.</td><td>F1</td></tr>
+  <tr><td>Loud · captcha wall</td><td>Human-check HTML, not products.</td><td>F1</td></tr>
+  <tr><td>Quiet · volume collapse</td><td>HTTP 200, too few products.</td><td>F2 / F4</td></tr>
+  <tr><td>Quiet · selector drift</td><td>Zero products extracted.</td><td>F2</td></tr>
+  <tr><td>Schema · price renamed</td><td>Price field gone. Guard asks.</td><td>F3</td></tr>
+  <tr><td>Schema · prices become n/a</td><td>Type errors. Bad rows held back.</td><td>F3</td></tr>
+  <tr><td>Quality · null flood</td><td>Most prices empty.</td><td>F4</td></tr>
+  <tr><td>Poison · one bad row</td><td>One product corrupts the batch.</td><td>F3 / F6</td></tr>
+</table>
+<figure>
+  <img src="architecture/hydra-architecture-fault-map.png" alt="Amazon fault map">
+  <figcaption>Figure 4. Amazon fault map. Same agent, same eight primitives, eight different breaks.</figcaption>
+</figure>
+
+<h2>9. Low-level design</h2>
+<p>Composition root is HydraApp in hydra/factory.py. One lock serializes ingest and heal so the dashboard and the CLI cannot race. The Amazon contract is the source, not Python.</p>
+<p>Acquisition ladder: scrape_dataset → fetch_markdown → fetch_html. Extraction: json_records plus field aliases. Schema: required asin and title. Assertions: at least 5 rows; ASIN and title not null; in-stock price null rate under 25 percent; no duplicate ASINs. Healing: max autonomy tier 2, budget 5 per hour.</p>
+<p>The watch loop (make hydra-dashboard) ingests every 3 seconds. On failure it holds 3.5 seconds so judges can see BROKE, then heals, then resets the acquisition rung.</p>
+<table>
+  <tr><th>DuckDB table</th><th>Purpose</th></tr>
+  <tr><td>raw_snapshot</td><td>Append-only raw payload, hash, rung, expected_rows for P2.</td></tr>
+  <tr><td>pipeline_run</td><td>One ingest: status, rows, error_type, trace_id.</td></tr>
+  <tr><td>assertion_result</td><td>Each SQL check, pass or fail.</td></tr>
+  <tr><td>dead_letter</td><td>Quarantined poison or schema rows.</td></tr>
+  <tr><td>incident</td><td>Opened on detect; closed healed, escalated, or blocked.</td></tr>
+  <tr><td>heal_ledger</td><td>One primitive attempt plus verification_passed.</td></tr>
+  <tr><td>heal_pattern</td><td>Fingerprint to successful primitive.</td></tr>
+  <tr><td>source_state</td><td>health, circuit_state, current_rung.</td></tr>
+  <tr><td>pending_approval</td><td>Tier 2 gate for schema change or failover.</td></tr>
+</table>
+<p>capabilities.yaml binds logical names to MCP tools. Business logic never calls a raw tool name. Replay mode never needs Port, SigNoz, or Bright Data to be reachable.</p>
+<p>SPEC.md and the Hacker News digest are still in the repository. HYDRA sits beside that factory. HYDRA does not write data/latest.json. The public product is the Amazon dashboard.</p>
+
+<h2>10. Four-minute judge script</h2>
+<p><strong>Rehearse this three times. One break at a time. Wait for Healthy before the next. Default mode is replay. You do not need a Bright Data key.</strong></p>
+<h3>0:00 to 0:30 — The setup</h3>
+<p>Open <a href="http://2.29.4.204:8080">http://2.29.4.204:8080</a>. Names under the title are LinkedIn links. Catalog is healthy. Ten Amazon products.</p>
+<p>Say: “This is a live Amazon catalog. The page is serving last-good data, not a raw scrape. I am about to break the scrape on purpose.”</p>
+<h3>0:30 to 1:15 — Loud 403</h3>
+<p>Open the Break dropdown. Choose Loud · HTTP 403. Click Break Amazon. Ribbon says BROKE. Cards stay on screen, dimmed. Loop walks Detect → Classify → Guard → Act → Verify. Pill returns to Healthy.</p>
+<p>Say: “Detected as F1, acquisition failure. It backed off, then climbed the acquisition ladder. Two attempts, both recorded. Heal success counts this as one incident, not two.”</p>
+<h3>1:15 to 2:30 — Quiet volume collapse</h3>
+<p>Wait until Healthy. Choose Quiet · volume collapse. Click Break Amazon.</p>
+<p>Say: “This is the failure that actually costs money. The scrape returns HTTP 200. A naive pipeline would ship three products and call it success. The row-count assertion caught it.”</p>
+<h3>2:30 to 3:15 — Schema rename, if you want Guard</h3>
+<p>Choose Schema · price renamed. Click Break Amazon.</p>
+<p>Say: “Schema change. The agent is not allowed to do this alone. Tier 2 stops and asks. An agent that can change your schema at 3 a.m. without asking is not a feature.”</p>
+<h3>3:15 to 4:00 — The numbers and close</h3>
+<p>Hover any scoreboard tile. Read MTTD, MTTA, MTTR, heal success, false-heal rate, autonomy.</p>
+<p>Say: “We track false heals, because an agent that claims success without verifying is worse than no agent. Same agent. Same eight primitives. The demo source is Amazon. The healer is not Amazon-specific.”</p>
+<table>
+  <tr><th>If this happens</th><th>Do this</th></tr>
+  <tr><td>Loop freezes on Guard</td><td>Designed, not a hang. Click Reset circuit, then Break again.</td></tr>
+  <tr><td>Venue wifi dies</td><td>You are already on replay. Do not switch to live.</td></tr>
+  <tr><td>Live fetch is requested</td><td>Use port 8081 only. Do not touch 8080.</td></tr>
+  <tr><td>Same 403 repeats</td><td>Fingerprint escalation opened the circuit. Reset, then continue.</td></tr>
+  <tr><td>Everything breaks</td><td>This document. Do not write code on stage.</td></tr>
+</table>
+
+<h2>11. Scoreboard and talking points</h2>
+<table>
+  <tr><th>Metric</th><th>Definition</th><th>How to say it</th></tr>
+  <tr><td>MTTD</td><td>Detection time minus fault injection time</td><td>How fast we noticed.</td></tr>
+  <tr><td>MTTA</td><td>First heal attempt minus detection</td><td>How fast we started a repair.</td></tr>
+  <tr><td>MTTR</td><td>Resolution minus detection</td><td>How fast the original checklist went green.</td></tr>
+  <tr><td>Heal success</td><td>Incidents healed / incidents finished</td><td>Not every ladder step. One incident, one score.</td></tr>
+  <tr><td>False-heal rate</td><td>Marked success, then the same fingerprint fails again</td><td>We measure our own lies.</td></tr>
+  <tr><td>Autonomy</td><td>Verified heals with no human approver</td><td>Most classes do not need a person.</td></tr>
+</table>
+<h3>Sentences that land</h3>
+<ul>
+  <li>“Retries are not healing. Healing is detect, classify, guard, act, and verify on the same assertion.”</li>
+  <li>“HTTP 200 with empty products is how bad catalogs ship. That is the quiet half.”</li>
+  <li>“The model does not get to grade its own homework.”</li>
+  <li>“Knowing when to quit is a design requirement, not a bug.”</li>
+  <li>“If it is not recorded in the ledger, it did not happen.”</li>
+</ul>
+
+<h2>12. Commands, invariants, and repository map</h2>
+<p>make hydra-test<br>
+make hydra-dashboard &nbsp;&nbsp;# replay UI on :8080<br>
+make hydra-dashboard-live &nbsp;&nbsp;# live UI on :8081<br>
+python3 -m hydra scrape|break|heal|status|approve|reset-circuit|dashboard</p>
+<ol>
+  <li>Last-good stays up. Raw Bright Data is never written onto the serving catalog.</li>
+  <li>Heal is triggered. No silent auto-heal on a healthy feed.</li>
+  <li>One Amazon contract. Do not create a second scraper for the demo.</li>
+  <li>Port writes hit the local ledger first.</li>
+  <li>OpenTelemetry failures are swallowed. The dashboard does not require SigNoz.</li>
+  <li>Default mode is replay.</li>
+</ol>
+
+<h2>30-second pitch</h2>
+<p class="lede">External data breaks constantly, quietly, and differently every time. Retries are not healing. HYDRA makes sources declarative and failures categorical. Repairs bind to classes, never to sources, so healing generalizes. The page never goes blank. The agent knows when to stop, asks before it changes your schema, and reports its own false-heal rate.</p>
+</body>
+</html>
