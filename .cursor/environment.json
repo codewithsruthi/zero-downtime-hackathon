@@ -1,0 +1,14 @@
+{
+  "name": "Zero Downtime Factory",
+  "install": "./scripts/setup.sh",
+  "terminals": [
+    {
+      "name": "digest-app",
+      "command": "FACTORY_MODE=replay FACTORY_OTEL_DISABLED=1 FACTORY_APP_PORT=3000 node --import ./app/instrumentation.js app/server.js",
+      "description": "HN digest web app on http://127.0.0.1:3000 (replay mode, OTEL export disabled). Serves last-known-good stories and stays HTTP 200 even while the scraper is broken."
+    }
+  ],
+  "ports": [
+    { "name": "digest-app", "port": 3000 }
+  ]
+}
