@@ -41,8 +41,6 @@ The dashboard shows real Amazon rows (ASIN, title, price, availability). Replay 
 
 Raw scrape output never lands on the catalog the dashboard serves. Acquire, parse, validate, then promote. If a scrape fails, the last-good catalog stays up.
 
-![HYDRA system architecture](docs/architecture/hydra-architecture-system.png)
-
 ```mermaid
 flowchart TB
   urls[Amazon product URLs] --> mode{Replay or live}
@@ -64,8 +62,6 @@ flowchart TB
 
 A repair counts only if the same check that failed, passes afterward.
 
-![Closed-loop heal](docs/architecture/hydra-architecture-heal-loop.png)
-
 ```mermaid
 flowchart LR
   detect[01 Detect] --> classify[02 Classify] --> guard[03 Guard] --> act[04 Act] --> verify[05 Verify]
@@ -84,8 +80,6 @@ flowchart LR
 
 The dashboard reads `data/hydra-live.json`. It keeps `products_good` when `products_now` is bad. Raw runs stay in `data/raw/`.
 
-![Last-good catalog](docs/architecture/hydra-architecture-last-good.png)
-
 ```mermaid
 flowchart LR
   raw[1 Raw run] --> check[2 Normalize and validate]
@@ -99,8 +93,6 @@ flowchart LR
 ## Eight Amazon faults
 
 The Break dropdown injects one runtime fault. Same agent, same eight primitives.
-
-![Amazon fault map](docs/architecture/hydra-architecture-fault-map.png)
 
 | Fault | What you see | Class | Typical repair |
 |---|---|---|---|
