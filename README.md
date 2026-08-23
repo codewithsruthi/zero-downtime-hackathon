@@ -1,6 +1,6 @@
 # HYDRA
 
-**Amazon catalog reliability.** When the scrape breaks, the last-good catalog stays up. HYDRA detects the failure, classifies it, guards the repair, acts, and verifies — without a human in the loop for most classes.
+A self-healing Amazon catalog dashboard. When a scrape fails, the last-good catalog stays on screen. HYDRA detects the failure, classifies it, guards the repair, acts, and verifies.
 
 [Sruthi Anuvalasetty](https://www.linkedin.com/in/sruthi-anuvalasetty/) · [Ramachandra Nalam](https://www.linkedin.com/in/ramachandra-nalam/)
 
@@ -8,19 +8,17 @@
 
 ## Dashboard
 
-**Judges, open this:**
+This is the public dashboard we built: Amazon product cards, a health ribbon, and a Break control that walks Detect → Classify → Guard → Act → Verify.
 
-# [https://zero-downtime-hackathon-dusky.vercel.app](https://zero-downtime-hackathon-dusky.vercel.app)
+**https://zero-downtime-hackathon-dusky.vercel.app**
 
-Live on Vercel from GitHub `main`. Server copy: [http://2.29.4.204:8080](http://2.29.4.204:8080). Copy-paste URL: [`DASHBOARD.md`](DASHBOARD.md).
+It deploys from GitHub `main` on Vercel. A local copy can run on `http://127.0.0.1:8080`.
 
-No Port login. No SigNoz login. Choose a fault, click **Break Amazon**, watch Detect → Classify → Guard → Act → Verify. Dark / Light stays pinned at the bottom left.
-
-Default mode is **replay** (`HYDRA_MODE=replay`). You do not need a Bright Data key for the demo.
+Pick a fault, click **Break Amazon**, and watch the catalog and the five stages. Dark / Light stays at the bottom left. Default mode is **replay** (`HYDRA_MODE=replay`) — no Bright Data key required.
 
 ---
 
-## What it is
+## What we built
 
 HYDRA is a self-healing data agent pointed at one source: **Amazon products**.
 
@@ -35,29 +33,29 @@ HYDRA is a self-healing data agent pointed at one source: **Amazon products**.
 | Required fields | `asin`, `title` |
 | Quality floor | at least 5 products |
 
-The catalog on the dashboard is real Amazon rows (ASIN, title, price, availability). Replay means we are not calling Bright Data on every tick, so the demo does not depend on venue wifi.
+The dashboard shows real Amazon rows (ASIN, title, price, availability). Replay serves the fixture so the page does not call Bright Data on every tick.
 
 ---
 
 ## Architecture
 
-HYDRA never writes a raw scrape onto the catalog the public page serves. Acquire, parse, validate, then promote. If the scrape fails, cards stay on last-good.
+HYDRA never writes a raw scrape onto the catalog the page serves. Acquire, parse, validate, then promote. If the scrape fails, cards stay on last-good.
 
 ![HYDRA system architecture](docs/architecture/hydra-architecture-system.png)
 
 ### Closed-loop heal
 
-A repair is only a repair if the same check that failed, passes afterward.
+A repair counts only if the same check that failed, passes afterward.
 
 ![Detect, classify, guard, act, verify](docs/architecture/hydra-architecture-heal-loop.png)
 
-| Step | What judges see |
+| Step | What the dashboard shows |
 |---|---|
-| **Detect** | Failed Amazon scrape opens an incident (MTTD). |
-| **Classify** | Telemetry maps to a failure class, F1–F6. No Amazon-specific if-statements. |
+| **Detect** | A failed Amazon scrape opens an incident (MTTD). |
+| **Classify** | Telemetry maps to a failure class, F1–F6. |
 | **Guard** | Heal budget, circuit, and autonomy tier. Schema changes wait for approve. |
 | **Act** | One primitive from P1–P8 (backoff, climb the ladder, quarantine, replay raw, stop). |
-| **Verify** | Re-run the failing assertion. No softer substitute check. |
+| **Verify** | Re-run the failing assertion. |
 
 ### Last-good catalog
 
@@ -69,7 +67,7 @@ Bright Data (or the fixture) never overwrites the serving document. Raw goes to 
 
 ## Eight Amazon faults
 
-Every fault is a runtime flag. The Break dropdown on the dashboard injects one. Same agent, same eight primitives.
+The Break dropdown injects one runtime fault. Same agent, same eight primitives.
 
 ![Amazon fault map](docs/architecture/hydra-architecture-fault-map.png)
 
@@ -88,7 +86,16 @@ Every fault is a runtime flag. The Break dropdown on the dashboard injects one. 
 
 ---
 
-## Run it
+## Using the dashboard
+
+1. Open the [dashboard](https://zero-downtime-hackathon-dusky.vercel.app). The catalog starts healthy.
+2. Choose a fault and click **Break Amazon**. The ribbon marks the break. Cards keep last-good (or show the damaged fields for that fault). Stages walk Detect → Verify.
+3. Wait for **Healthy** before the next break.
+4. The scoreboard tracks MTTD, MTTA, MTTR, heal success, false-heal rate, and autonomy.
+
+---
+
+## Run it locally
 
 Python 3.11+ and a virtualenv.
 
@@ -100,7 +107,7 @@ make hydra-test
 make hydra-dashboard
 ```
 
-Then open `http://127.0.0.1:8080` (this machine: `http://2.29.4.204:8080`).
+Then open `http://127.0.0.1:8080`.
 
 ```bash
 # one scrape from the fixture
@@ -114,7 +121,7 @@ Then open `http://127.0.0.1:8080` (this machine: `http://2.29.4.204:8080`).
 
 ### Live Bright Data (optional)
 
-Only if a judge asks to see a live fetch. Needs `BRIGHTDATA_API_TOKEN` or `BRIGHTDATA_API_KEY`. Replay stays on `:8080`. Live is isolated on `:8081` so it cannot overwrite the replay snapshot.
+Needs `BRIGHTDATA_API_TOKEN` or `BRIGHTDATA_API_KEY`. Replay stays on `:8080`. Live is isolated on `:8081` so it cannot overwrite the replay snapshot.
 
 ```bash
 export BRIGHTDATA_API_TOKEN=...
@@ -137,7 +144,7 @@ make hydra-signoz              # optional SigNoz
 python3 -m hydra scrape|break|heal|status|approve|reset-circuit|dashboard
 ```
 
-Env that matters for the public page (see `.env.example`):
+Env for the dashboard (see `.env.example`):
 
 ```
 HYDRA_MODE=replay
@@ -153,22 +160,10 @@ HYDRA_DASHBOARD_HOLD_S=3.5
 ## Invariants
 
 1. **Last-good stays up.** Raw Bright Data / CLI output is never written onto the serving catalog.
-2. **Heal is triggered.** The dashboard watch loop heals after you break. There is no silent auto-heal on a healthy feed.
-3. **One Amazon contract.** `amazon_products` — do not create a second scraper for the demo.
+2. **Heal is triggered.** The dashboard heals after you break. There is no silent auto-heal on a healthy feed.
+3. **One Amazon contract.** `amazon_products` — do not create a second scraper for this dashboard.
 4. **Port writes hit the local ledger first.** A Port login failure does not fail the pipeline.
-5. **OTEL failures are swallowed** (3s timeout, log once). Service name for HYDRA paths stays with the HYDRA runtime; the dashboard does not require SigNoz.
-
----
-
-## Judge script (about four minutes)
-
-1. Open [http://2.29.4.204:8080](http://2.29.4.204:8080). Names under the title are LinkedIn links. Catalog is healthy.
-2. **Loud 403.** Break Amazon. Ribbon says BROKE. Catalog holds last-good. Loop walks Detect → Verify. Pill returns to Healthy.
-3. **Quiet volume collapse.** HTTP 200, too few rows. This is the failure that usually ships bad data. HYDRA catches the floor assertion.
-4. **Schema rename** if you want Guard. Tier 2 stops and asks.
-5. Read the scoreboard: MTTD, MTTA, MTTR, heal success, false-heal rate, autonomy. Hover any tile.
-
-One break at a time. Wait for **Healthy** before the next.
+5. **OTEL failures are swallowed** (3s timeout, log once). The dashboard does not require SigNoz.
 
 ---
 
@@ -177,7 +172,7 @@ One break at a time. Wait for **Healthy** before the next.
 ```
 contracts/amazon_products.json   contract + assertions + ladder
 fixtures/amazon_products.json    replay catalog
-hydra/dashboard.py               public UI (:8080)
+hydra/dashboard.py               dashboard UI
 hydra/dashboard_live.py          isolated live UI (:8081)
 hydra/runtime/                   acquire → parse → validate → load
 hydra/agent/                     detect, classify, guard, act, verify
@@ -185,4 +180,4 @@ hydra/chaos/                     the eight Amazon faults
 data/hydra-live.json             serving snapshot (gitignored)
 ```
 
-Design notes for the agent itself live in `HYDRA.md`. This README is the Amazon catalog product.
+Design notes for the agent live in `HYDRA.md`.
