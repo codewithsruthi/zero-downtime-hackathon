@@ -39,15 +39,38 @@ The dashboard shows real Amazon rows (ASIN, title, price, availability). Replay 
 
 ## Architecture
 
-HYDRA never writes a raw scrape onto the catalog the page serves. Acquire, parse, validate, then promote. If the scrape fails, cards stay on last-good.
+Raw scrape output never lands on the catalog the dashboard serves. Acquire, parse, validate, then promote. If a scrape fails, the last-good catalog stays up.
 
 ![HYDRA system architecture](docs/architecture/hydra-architecture-system.png)
+
+```mermaid
+flowchart TB
+  urls[Amazon product URLs] --> mode{Replay or live}
+  contract[Contract · amazon_products] --> mode
+  dataset[Bright Data dataset] --> mode
+  mode -->|replay| pipe
+  mode -->|live| pipe
+  subgraph pipe [HYDRA pipeline]
+    direction LR
+    acquire[Acquire] --> parse[Parse] --> validate[Validate] --> load[Load]
+  end
+  pipe -->|ok| catalog[Last-good catalog]
+  pipe -->|fail| catalog
+  catalog --> dash[Dashboard]
+  pipe -.-> ledgers[Port · DuckDB · SigNoz]
+```
 
 ### Closed-loop heal
 
 A repair counts only if the same check that failed, passes afterward.
 
-![Detect, classify, guard, act, verify](docs/architecture/hydra-architecture-heal-loop.png)
+![Closed-loop heal](docs/architecture/hydra-architecture-heal-loop.png)
+
+```mermaid
+flowchart LR
+  detect[01 Detect] --> classify[02 Classify] --> guard[03 Guard] --> act[04 Act] --> verify[05 Verify]
+  verify -.->|same assertion must pass| detect
+```
 
 | Step | What the dashboard shows |
 |---|---|
@@ -59,9 +82,17 @@ A repair counts only if the same check that failed, passes afterward.
 
 ### Last-good catalog
 
-Bright Data (or the fixture) never overwrites the serving document. Raw goes to `data/raw/`. The dashboard reads `data/hydra-live.json` and keeps `products_good` when `products_now` is bad.
+The dashboard reads `data/hydra-live.json`. It keeps `products_good` when `products_now` is bad. Raw runs stay in `data/raw/`.
 
-![Last-good catalog path](docs/architecture/hydra-architecture-last-good.png)
+![Last-good catalog](docs/architecture/hydra-architecture-last-good.png)
+
+```mermaid
+flowchart LR
+  raw[1 Raw run] --> check[2 Normalize and validate]
+  check --> promote[3 Atomic promote]
+  promote -->|ok| served[Last-good on the dashboard]
+  promote -->|fail| held[This scrape held back]
+```
 
 ---
 
